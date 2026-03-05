@@ -217,16 +217,19 @@ public class LoadRunner {
         long successCount = s.success.get();
         long errorCount = s.errors.get();
 
-        // Use endTime if test is finished, otherwise now()
-        long nowMs = (s.endTime > 0) ? s.endTime : System.currentTimeMillis();
-        long elapsedMs = nowMs - s.startTime;
-        double elapsedSec = Math.max(elapsedMs / 1000.0, 0.001);
-
-        // Collect samples for percentiles
+        // Collect samples once (used for elapsed time, percentiles, time series)
         long[][] sampleArray = s.samples.toArray(new long[0][]);
+
+        // Use last sample timestamp for elapsed time (avoids RPS dropping after workers stop)
+        long lastSampleMs = s.startTime;
         long[] rts = new long[sampleArray.length];
-        for (int i = 0; i < sampleArray.length; i++) rts[i] = sampleArray[i][1];
+        for (int i = 0; i < sampleArray.length; i++) {
+            if (sampleArray[i][0] > lastSampleMs) lastSampleMs = sampleArray[i][0];
+            rts[i] = sampleArray[i][1];
+        }
         Arrays.sort(rts);
+        long elapsedMs = lastSampleMs - s.startTime;
+        double elapsedSec = Math.max(elapsedMs / 1000.0, 0.001);
 
         // Status codes
         Map<String, Object> statusCodeMap = new LinkedHashMap<>();
