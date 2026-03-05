@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:os="http://www.mulesoft.org/schema/mule/os"
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+        http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+        http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+
+    <!-- Load test executor: launches concurrent async workers using Mule HTTP Request -->
+    <sub-flow name="execute-load-test-flow" doc:name="Execute Load Test">
+        <logger level="INFO" message='#["Starting load test " ++ vars.testId ++ " -> " ++ vars.testConfig.targetUrl ++ " (concurrency=" ++ (vars.testConfig.concurrency as String) ++ ", duration=" ++ (vars.testConfig.duration as String) ++ "s)"]' doc:name="Log Start"/>
+
+        <!-- Initialize metrics in ObjectStore -->
+        <os:store key="#[vars.testId ++ '-metrics']" objectStore="metrics-store" doc:name="Init Metrics">
+            <os:value>#[output application/java --- {
+                totalRequests: 0,
+                successCount: 0,
+                errorCount: 0,
+                totalResponseTime: 0,
+                minResponseTime: 999999,
+                maxResponseTime: 0,
+                startTime: now() as Number {unit: "milliseconds"},
+                samples: []
+            }]</os:value>
+        </os:store>
+
+        <!-- Launch concurrent workers -->
+        <foreach collection="#[1 to vars.testConfig.concurrency]" doc:name="Launch Workers">
+            <set-variable variableName="workerId" value="#[payload]" doc:name="Worker ID"/>
+            <async doc:name="Async Worker">
+                <flow-ref name="worker-loop-flow" doc:name="Worker Loop"/>
+            </async>
+        </foreach>
+
+        <!-- Wait for test duration + grace period, then mark complete -->
+        <flow-ref name="wait-for-completion-flow" doc:name="Wait for Completion"/>
+
+        <logger level="INFO" message='#["Load test " ++ vars.testId ++ " completed"]' doc:name="Log Complete"/>
+    </sub-flow>
+
+    <!-- Single worker: fires requests in a loop until duration expires or stopped -->
+    <flow name="worker-loop-flow" doc:name="Worker Loop">
+        <set-variable variableName="endTime" value="#[(now() as Number {unit: &quot;milliseconds&quot;}) + (vars.testConfig.duration * 1000)]" doc:name="Calculate End Time"/>
+
+        <foreach collection="#[1 to (vars.testConfig.duration * 200)]" doc:name="Request Loop">
+            <!-- Check if still running -->
+            <os:retrieve key="#[vars.testId]" objectStore="test-store" doc:name="Get Test State">
+                <os:default-value>#[output application/java --- {status: "running"}]</os:default-value>
+            </os:retrieve>
+
+            <choice doc:name="Still Running?">
+                <when expression="#[payload.status == 'running' and (now() as Number {unit: 'milliseconds'}) &lt; vars.endTime]">
+                    <set-variable variableName="reqStart" value="#[now() as Number {unit: 'milliseconds'}]" doc:name="Request Start"/>
+
+                    <try doc:name="Try Request">
+                        <http:request config-ref="http-request-config" method="#[vars.testConfig.method]"
+                                      url="#[vars.testConfig.targetUrl]" doc:name="Send Request">
+                            <http:response-validator>
+                                <http:success-status-code-validator values="100..599"/>
+                            </http:response-validator>
+                        </http:request>
+
+                        <set-variable variableName="reqElapsed" value="#[(now() as Number {unit: 'milliseconds'}) - vars.reqStart]" doc:name="Calc Elapsed"/>
+                        <set-variable variableName="reqStatus" value="#[attributes.statusCode]" doc:name="Get Status"/>
+                        <set-variable variableName="reqError" value="#[attributes.statusCode >= 400]" doc:name="Is Error"/>
+
+                        <!-- Record metrics -->
+                        <flow-ref name="record-metric-flow" doc:name="Record Metric"/>
+
+                        <error-handler>
+                            <on-error-continue type="ANY">
+                                <set-variable variableName="reqElapsed" value="#[(now() as Number {unit: 'milliseconds'}) - vars.reqStart]" doc:name="Calc Elapsed"/>
+                                <set-variable variableName="reqStatus" value="#[0]" doc:name="Error Status"/>
+                                <set-variable variableName="reqError" value="#[true]" doc:name="Is Error"/>
+                                <flow-ref name="record-metric-flow" doc:name="Record Metric"/>
+                            </on-error-continue>
+                        </error-handler>
+                    </try>
+                </when>
+                <otherwise>
+                    <!-- Stop loop by raising error -->
+                    <raise-error type="APP:WORKER_DONE" description="Worker finished"/>
+                </otherwise>
+            </choice>
+        </foreach>
+
+        <error-handler>
+            <on-error-continue type="APP:WORKER_DONE">
+                <logger level="DEBUG" message="Worker finished" doc:name="Worker Done"/>
+            </on-error-continue>
+        </error-handler>
+    </flow>
+
+    <!-- Record a single request metric into ObjectStore -->
+    <sub-flow name="record-metric-flow" doc:name="Record Metric">
+        <os:retrieve key="#[vars.testId ++ '-metrics']" objectStore="metrics-store" doc:name="Get Metrics">
+            <os:default-value>#[output application/java --- {totalRequests: 0, successCount: 0, errorCount: 0, totalResponseTime: 0, minResponseTime: 999999, maxResponseTime: 0, startTime: 0, samples: []}]</os:default-value>
+        </os:retrieve>
+
+        <ee:transform doc:name="Update Metrics">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+var m = payload
+var elapsed = vars.reqElapsed as Number
+var isErr = vars.reqError
+var sample = {timestamp: now() as Number {unit: "milliseconds"}, elapsed: elapsed, status: vars.reqStatus, error: isErr}
+---
+{
+    totalRequests: (m.totalRequests default 0) + 1,
+    successCount: (m.successCount default 0) + (if (isErr) 0 else 1),
+    errorCount: (m.errorCount default 0) + (if (isErr) 1 else 0),
+    totalResponseTime: (m.totalResponseTime default 0) + elapsed,
+    minResponseTime: min([(m.minResponseTime default 999999), elapsed]),
+    maxResponseTime: max([(m.maxResponseTime default 0), elapsed]),
+    startTime: m.startTime,
+    samples: if (sizeOf(m.samples default []) < 10000) ((m.samples default []) << sample) else (m.samples default [])
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+
+        <os:store key="#[vars.testId ++ '-metrics']" objectStore="metrics-store" doc:name="Save Metrics">
+            <os:value>#[payload]</os:value>
+        </os:store>
+    </sub-flow>
+
+    <!-- Wait for test completion, then mark as completed -->
+    <flow name="wait-for-completion-flow" doc:name="Wait for Completion">
+        <foreach collection="#[1 to (vars.testConfig.duration + 5)]" doc:name="Wait Loop">
+            <os:retrieve key="#[vars.testId]" objectStore="test-store" doc:name="Get State">
+                <os:default-value>#[output application/java --- {status: "running"}]</os:default-value>
+            </os:retrieve>
+            <choice doc:name="Check Status">
+                <when expression="#[payload.status != 'running']">
+                    <raise-error type="APP:WAIT_DONE" description="Test stopped externally"/>
+                </when>
+                <otherwise>
+                    <set-variable variableName="sleepResult" value="#[import * from dw::Runtime --- true wait 1000]" doc:name="Sleep 1s"/>
+                </otherwise>
+            </choice>
+        </foreach>
+
+        <!-- Duration expired naturally: mark completed -->
+        <flow-ref name="mark-test-completed-flow" doc:name="Mark Completed"/>
+
+        <error-handler>
+            <on-error-continue type="APP:WAIT_DONE">
+                <logger level="DEBUG" message="Test stopped externally" doc:name="Done"/>
+            </on-error-continue>
+        </error-handler>
+    </flow>
+
+    <!-- Mark test as completed in ObjectStore -->
+    <sub-flow name="mark-test-completed-flow" doc:name="Mark Test Completed">
+        <os:retrieve key="#[vars.testId]" objectStore="test-store" doc:name="Get State">
+            <os:default-value>#[output application/java --- {status: "unknown"}]</os:default-value>
+        </os:retrieve>
+        <choice doc:name="Still Running?">
+            <when expression="#[payload.status == 'running']">
+                <ee:transform doc:name="Set Completed">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload ++ {
+    status: "completed",
+    completedAt: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"}
+}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+                <os:store key="#[vars.testId]" objectStore="test-store" doc:name="Save Final State">
+                    <os:value>#[payload]</os:value>
+                </os:store>
+                <logger level="INFO" message='#["Test " ++ vars.testId ++ " marked as completed"]' doc:name="Log Completed"/>
+            </when>
+            <otherwise>
+                <logger level="DEBUG" message="Already stopped/completed" doc:name="Skip"/>
+            </otherwise>
+        </choice>
+    </sub-flow>
+
+</mule>

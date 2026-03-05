@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+    <!-- Dashboard UI -->
+    <flow name="static-dashboard-flow" doc:name="Dashboard UI">
+        <http:listener config-ref="http-listener-config" path="/" doc:name="HTTP Listener">
+            <http:response statusCode="200">
+                <http:headers><![CDATA[#[{
+                    "Content-Type": "text/html; charset=UTF-8",
+                    "Cache-Control": "no-cache"
+                }]]]></http:headers>
+            </http:response>
+        </http:listener>
+
+        <set-payload value="#[readUrl('classpath://static/index.html', 'text/plain')]" mimeType="text/html; charset=UTF-8" doc:name="Load Dashboard HTML"/>
+    </flow>
+
+</mule>

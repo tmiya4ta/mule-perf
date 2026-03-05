@@ -1,0 +1,21 @@
+{
+  "configs": [
+    "global-config.xml",
+    "api-main.xml",
+    "impl/test-management.xml",
+    "impl/load-executor.xml",
+    "impl/metrics-collector.xml",
+    "impl/static-server.xml"
+  ],
+  "name": "mule-perf",
+  "classLoaderModelLoaderDescriptor": {
+    "attributes": {
+      "exportedResources": []
+    },
+    "id": "mule"
+  },
+  "minMuleVersion": "4.6.0",
+  "javaSpecificationVersions": [
+    "17"
+  ]
+}

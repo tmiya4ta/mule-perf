@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+        http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+
+    <!-- Main API Router -->
+    <flow name="api-main-flow" doc:name="API Main Router">
+        <http:listener config-ref="http-listener-config" path="/api/*" doc:name="HTTP Listener">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers><![CDATA[#[vars.outboundHeaders default {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                }]]]></http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers><![CDATA[#[{
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                }]]]></http:headers>
+            </http:error-response>
+        </http:listener>
+
+        <set-variable variableName="method" value="#[attributes.method]" doc:name="Set Method"/>
+        <set-variable variableName="path" value="#[attributes.requestPath]" doc:name="Set Path"/>
+
+        <choice doc:name="Route by Method + Path">
+            <!-- POST /api/tests - Create test -->
+            <when expression="#[vars.method == 'POST' and vars.path == '/api/tests']">
+                <flow-ref name="create-test-flow" doc:name="Create Test"/>
+            </when>
+
+            <!-- GET /api/tests - List tests -->
+            <when expression="#[vars.method == 'GET' and vars.path == '/api/tests']">
+                <flow-ref name="list-tests-flow" doc:name="List Tests"/>
+            </when>
+
+            <!-- GET /api/tests/{id}/metrics - Get metrics (must be before test detail) -->
+            <when expression="#[vars.method == 'GET' and (vars.path matches /\/api\/tests\/[^\/]+\/metrics$/)]">
+                <set-variable variableName="testId" value="#[(vars.path replace /\/api\/tests\// with ('')) replace /\/metrics$/ with ('')]" doc:name="Extract Test ID"/>
+                <flow-ref name="get-metrics-flow" doc:name="Get Metrics"/>
+            </when>
+
+            <!-- GET /api/tests/{id} - Test detail -->
+            <when expression="#[vars.method == 'GET' and (vars.path matches /\/api\/tests\/[^\/]+$/)]">
+                <set-variable variableName="testId" value="#[vars.path replace /\/api\/tests\// with ('')]" doc:name="Extract Test ID"/>
+                <flow-ref name="get-test-flow" doc:name="Get Test"/>
+            </when>
+
+            <!-- DELETE /api/tests/{id} - Stop test -->
+            <when expression="#[vars.method == 'DELETE' and (vars.path matches /\/api\/tests\/[^\/]+$/)]">
+                <set-variable variableName="testId" value="#[vars.path replace /\/api\/tests\// with ('')]" doc:name="Extract Test ID"/>
+                <flow-ref name="stop-test-flow" doc:name="Stop Test"/>
+            </when>
+
+            <!-- GET /api/health - Health check -->
+            <when expression="#[vars.method == 'GET' and vars.path == '/api/health']">
+                <ee:transform doc:name="Health Response">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    status: "UP",
+    service: "mule-perf",
+    timestamp: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"}
+}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- OPTIONS - CORS preflight -->
+            <when expression="#[vars.method == 'OPTIONS']">
+                <set-variable variableName="outboundHeaders" value="#[{
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                }]" doc:name="CORS Headers"/>
+                <set-payload value='#[output application/json --- {}]' doc:name="Empty Response"/>
+            </when>
+
+            <!-- 404 Not Found -->
+            <otherwise>
+                <set-variable variableName="httpStatus" value="#[404]" doc:name="Set 404"/>
+                <ee:transform doc:name="Not Found Response">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    error: "Not Found",
+    message: "No resource found for " ++ (vars.method default "") ++ " " ++ (vars.path default ""),
+    status: 404
+}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </otherwise>
+        </choice>
+
+        <error-handler>
+            <on-error-continue type="ANY">
+                <set-variable variableName="httpStatus" value="#[500]" doc:name="Set 500"/>
+                <ee:transform doc:name="Error Response">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    error: "Internal Server Error",
+    message: error.description default "Unknown error",
+    status: 500
+}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </on-error-continue>
+        </error-handler>
+    </flow>
+
+</mule>

@@ -1,0 +1,6 @@
+http:
+  port: "8081"
+
+request:
+  timeout: "30000"
+  connectionIdleTimeout: "30000"
