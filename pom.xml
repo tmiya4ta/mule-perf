@@ -55,6 +55,12 @@
 			<version>1.2.2</version>
 			<classifier>mule-plugin</classifier>
 		</dependency>
+		<!-- Zeph NIO HTTP Client (for high-perf load testing) -->
+		<dependency>
+			<groupId>io.gitlab.myst3m</groupId>
+			<artifactId>zeph</artifactId>
+			<version>0.3.1</version>
+		</dependency>
 	</dependencies>
 
 	<repositories>

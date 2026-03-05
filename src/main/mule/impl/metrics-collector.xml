@@ -9,7 +9,9 @@
         http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
         http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
 
-    <!-- GET /api/tests/{id}/metrics -->
+    <!-- GET /api/tests/{id}/metrics
+         Metrics are computed directly in Java by LoadRunner for maximum speed.
+         No ObjectStore round-trip needed. -->
     <sub-flow name="get-metrics-flow" doc:name="Get Metrics">
         <os:retrieve key="#[vars.testId]" objectStore="test-store" doc:name="Get Test State">
             <os:default-value>#[output application/java --- null]</os:default-value>
@@ -19,71 +21,32 @@
 
         <choice doc:name="Test Exists?">
             <when expression="#[vars.testState != null]">
-                <os:retrieve key="#[vars.testId ++ '-metrics']" objectStore="metrics-store" doc:name="Get Metrics">
+                <!-- Get Java test ID mapping -->
+                <os:retrieve key="#[vars.testId ++ '-java']" objectStore="test-store" doc:name="Get Java Test ID">
                     <os:default-value>#[output application/java --- null]</os:default-value>
                 </os:retrieve>
 
-                <choice doc:name="Has Metrics?">
-                    <when expression="#[payload != null]">
-                        <ee:transform doc:name="Build Metrics Response">
+                <set-variable variableName="javaTestId" value="#[payload]" doc:name="Store Java Test ID"/>
+
+                <choice doc:name="Has Java Test?">
+                    <when expression="#[vars.javaTestId != null]">
+                        <!-- Get metrics directly from Java LoadRunner -->
+                        <ee:transform doc:name="Get Java Metrics">
                             <ee:message>
                                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
-var m = payload
-var totalReqs = m.totalRequests default 0
-var successCnt = m.successCount default 0
-var errorCnt = m.errorCount default 0
-var totalRt = m.totalResponseTime default 0
-var samples = m.samples default []
-var endTimeMs = if (vars.testState.status == "running") (now() as Number {unit: "milliseconds"})
-                else if (sizeOf(samples) > 0) max(samples map (s) -> s.timestamp)
-                else (now() as Number {unit: "milliseconds"})
-var elapsedMs = endTimeMs - (m.startTime default 0)
-var elapsedSec = max([elapsedMs / 1000, 0.001])
-var sortedRt = (samples map (s) -> s.elapsed) orderBy $
+var metrics = java!com::mycompany::perf::LoadRunner::status(vars.javaTestId)
 ---
-{
-    testId: vars.testId,
-    status: vars.testState.status,
-    targetUrl: vars.testState.targetUrl,
-    method: vars.testState.method,
-    concurrency: vars.testState.concurrency,
-    totalRequests: totalReqs,
-    successCount: successCnt,
-    errorCount: errorCnt,
-    responseTime: {
-        avg: if (totalReqs > 0) totalRt / totalReqs else 0,
-        min: m.minResponseTime default 0,
-        max: m.maxResponseTime default 0,
-        p50: if (sizeOf(sortedRt) > 0) sortedRt[floor(sizeOf(sortedRt) * 0.50)] else 0,
-        p95: if (sizeOf(sortedRt) > 0) sortedRt[min([floor(sizeOf(sortedRt) * 0.95), sizeOf(sortedRt) - 1])] else 0,
-        p99: if (sizeOf(sortedRt) > 0) sortedRt[min([floor(sizeOf(sortedRt) * 0.99), sizeOf(sortedRt) - 1])] else 0
-    },
-    throughput: {
-        rps: totalReqs / elapsedSec,
-        totalElapsedSeconds: elapsedSec
-    },
-    errorRate: if (totalReqs > 0) 100.0 * errorCnt / totalReqs else 0,
-    statusCodes: (samples groupBy (s) -> s.status) mapObject ((v, k) -> {(k): sizeOf(v)}),
-    timeSeries: (samples groupBy (s) -> (s.timestamp - (s.timestamp mod 1000))) pluck ((v, k) -> {
-        timestamp: k as Number,
-        rps: sizeOf(v),
-        avgRt: if (sizeOf(v) > 0) avg(v map (s) -> s.elapsed) else 0,
-        errors: sizeOf(v filter (s) -> s.error == true)
-    }) orderBy $.timestamp,
-    histogram: [
-        {label: "0-50ms", count: sizeOf(samples filter (s) -> s.elapsed < 50)},
-        {label: "50-100ms", count: sizeOf(samples filter (s) -> s.elapsed >= 50 and s.elapsed < 100)},
-        {label: "100-200ms", count: sizeOf(samples filter (s) -> s.elapsed >= 100 and s.elapsed < 200)},
-        {label: "200-500ms", count: sizeOf(samples filter (s) -> s.elapsed >= 200 and s.elapsed < 500)},
-        {label: "500ms-1s", count: sizeOf(samples filter (s) -> s.elapsed >= 500 and s.elapsed < 1000)},
-        {label: "1s+", count: sizeOf(samples filter (s) -> s.elapsed >= 1000)}
-    ]
+if (metrics != null) metrics
+else {
+    error: "Metrics not available",
+    testId: vars.testId
 }]]></ee:set-payload>
                             </ee:message>
                         </ee:transform>
                     </when>
                     <otherwise>
+                        <!-- Fallback: no Java test found -->
                         <ee:transform doc:name="No Metrics">
                             <ee:message>
                                 <ee:set-payload><![CDATA[%dw 2.0
@@ -92,7 +55,7 @@ output application/json
 {
     testId: vars.testId,
     status: vars.testState.status,
-    message: "No metrics available yet"
+    message: "No metrics available (legacy test)"
 }]]></ee:set-payload>
                             </ee:message>
                         </ee:transform>

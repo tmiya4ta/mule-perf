@@ -19,10 +19,11 @@ var body = payload
 ---
 {
     id: uuid(),
-    targetUrl: body.targetUrl default "http://localhost:8890/api/health",
+    targetUrl: body.targetUrl default "http://localhost:8888/api/health",
     method: upper(body.method default "GET"),
     concurrency: body.concurrency default 5,
     duration: body.duration default 30,
+    requestCount: body.requestCount,
     headers: body.headers default {},
     body: body.body,
     status: "running",
@@ -63,6 +64,7 @@ output application/json
     method: vars.testConfig.method,
     concurrency: vars.testConfig.concurrency,
     duration: vars.testConfig.duration,
+    requestCount: vars.testConfig.requestCount,
     createdAt: vars.testConfig.createdAt,
     message: "Load test started"
 }]]></ee:set-payload>
@@ -168,6 +170,12 @@ output application/json
         <choice doc:name="Test Exists?">
             <when expression="#[payload != null]">
                 <set-variable variableName="testConfig" value="#[payload]" doc:name="Store Config"/>
+
+                <!-- Stop Java LoadRunner if running -->
+                <os:retrieve key="#[vars.testId ++ '-java']" objectStore="test-store" doc:name="Get Java Test ID">
+                    <os:default-value>#[output application/java --- null]</os:default-value>
+                </os:retrieve>
+                <set-variable variableName="javaStopResult" value="#[if (payload != null) java!com::mycompany::perf::LoadRunner::stop(payload) else null]" doc:name="Stop Java LoadRunner"/>
 
                 <ee:transform doc:name="Update Status to Stopped">
                     <ee:message>
