@@ -35,10 +35,8 @@ var successCnt = m.successCount default 0
 var errorCnt = m.errorCount default 0
 var totalRt = m.totalResponseTime default 0
 var samples = m.samples default []
-var endTimeMs = if (vars.testState.status == "running") (now() as Number {unit: "milliseconds"})
-                else if (sizeOf(samples) > 0) max(samples map (s) -> s.timestamp)
-                else (now() as Number {unit: "milliseconds"})
-var elapsedMs = endTimeMs - (m.startTime default 0)
+var lastSampleMs = if (sizeOf(samples) > 0) max(samples map (s) -> s.timestamp) else (m.startTime default 0)
+var elapsedMs = lastSampleMs - (m.startTime default 0)
 var elapsedSec = max([elapsedMs / 1000, 0.001])
 var sortedRt = (samples map (s) -> s.elapsed) orderBy $
 ---
