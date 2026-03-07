@@ -183,4 +183,4 @@ src/main/
 
 ## License
 
-MIT
+Eclipse Public License 2.0
