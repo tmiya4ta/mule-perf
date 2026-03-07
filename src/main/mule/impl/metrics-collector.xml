@@ -1,77 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mule xmlns="http://www.mulesoft.org/schema/mule/core"
-      xmlns:os="http://www.mulesoft.org/schema/mule/os"
       xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
       xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="
         http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-        http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
         http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
 
-    <!-- GET /api/tests/{id}/metrics
-         Metrics are computed directly in Java by LoadRunner for maximum speed.
-         No ObjectStore round-trip needed. -->
+    <!-- GET /api/tests/{id}/metrics -->
     <sub-flow name="get-metrics-flow" doc:name="Get Metrics">
-        <os:retrieve key="#[vars.testId]" objectStore="test-store" doc:name="Get Test State">
-            <os:default-value>#[output application/java --- null]</os:default-value>
-        </os:retrieve>
-
-        <set-variable variableName="testState" value="#[payload]" doc:name="Store Test State"/>
-
-        <choice doc:name="Test Exists?">
-            <when expression="#[vars.testState != null]">
-                <!-- Get Java test ID mapping -->
-                <os:retrieve key="#[vars.testId ++ '-java']" objectStore="test-store" doc:name="Get Java Test ID">
-                    <os:default-value>#[output application/java --- null]</os:default-value>
-                </os:retrieve>
-
-                <set-variable variableName="javaTestId" value="#[payload]" doc:name="Store Java Test ID"/>
-
-                <choice doc:name="Has Java Test?">
-                    <when expression="#[vars.javaTestId != null]">
-                        <!-- Get metrics directly from Java LoadRunner -->
-                        <ee:transform doc:name="Get Java Metrics">
-                            <ee:message>
-                                <ee:set-payload><![CDATA[%dw 2.0
+        <ee:transform doc:name="Get Metrics from LoadRunner">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
 output application/json
-var metrics = java!com::mycompany::perf::LoadRunner::status(vars.javaTestId)
+var metrics = java!com::mycompany::perf::LoadRunner::status(vars.testId)
 ---
 if (metrics != null) metrics
-else {
-    error: "Metrics not available",
-    testId: vars.testId
-}]]></ee:set-payload>
-                            </ee:message>
-                        </ee:transform>
-                    </when>
-                    <otherwise>
-                        <!-- Fallback: no Java test found -->
-                        <ee:transform doc:name="No Metrics">
-                            <ee:message>
-                                <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-    testId: vars.testId,
-    status: vars.testState.status,
-    message: "No metrics available (legacy test)"
-}]]></ee:set-payload>
-                            </ee:message>
-                        </ee:transform>
-                    </otherwise>
-                </choice>
+else {error: "Not Found", message: "Test " ++ (vars.testId default "") ++ " not found"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <choice doc:name="Found?">
+            <when expression="#[payload.error != null]">
+                <set-variable variableName="httpStatus" value="#[404]" doc:name="Set 404"/>
             </when>
             <otherwise>
-                <set-variable variableName="httpStatus" value="#[404]" doc:name="Set 404"/>
-                <ee:transform doc:name="Not Found">
-                    <ee:message>
-                        <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{error: "Not Found", message: "Test " ++ (vars.testId default "") ++ " not found"}]]></ee:set-payload>
-                    </ee:message>
-                </ee:transform>
+                <logger level="DEBUG" message="Metrics found" doc:name="Found"/>
             </otherwise>
         </choice>
     </sub-flow>

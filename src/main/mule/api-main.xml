@@ -58,10 +58,46 @@
                 <flow-ref name="get-test-flow" doc:name="Get Test"/>
             </when>
 
+            <!-- DELETE /api/tests - Clear all finished tests -->
+            <when expression="#[vars.method == 'DELETE' and vars.path == '/api/tests']">
+                <ee:transform doc:name="Clear Tests">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{ message: java!com::mycompany::perf::LoadRunner::clearAll() }]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
             <!-- DELETE /api/tests/{id} - Stop test -->
             <when expression="#[vars.method == 'DELETE' and (vars.path matches /\/api\/tests\/[^\/]+$/)]">
                 <set-variable variableName="testId" value="#[vars.path replace /\/api\/tests\// with ('')]" doc:name="Extract Test ID"/>
                 <flow-ref name="stop-test-flow" doc:name="Stop Test"/>
+            </when>
+
+            <!-- GET /api/system - System metrics -->
+            <when expression="#[vars.method == 'GET' and vars.path == '/api/system']">
+                <ee:transform doc:name="System Metrics">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+java!com::mycompany::perf::LoadRunner::systemMetrics()]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- POST /api/exec - Execute OS command -->
+            <when expression="#[vars.method == 'POST' and vars.path == '/api/exec']">
+                <ee:transform doc:name="Execute Command">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+java!com::mycompany::perf::LoadRunner::exec(payload.command)]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
             </when>
 
             <!-- GET /api/health - Health check -->

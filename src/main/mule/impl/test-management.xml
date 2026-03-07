@@ -1,236 +1,113 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mule xmlns="http://www.mulesoft.org/schema/mule/core"
-      xmlns:os="http://www.mulesoft.org/schema/mule/os"
       xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
       xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="
         http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-        http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
         http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
 
     <!-- POST /api/tests - Create and start a load test -->
     <sub-flow name="create-test-flow" doc:name="Create Test">
-        <ee:transform doc:name="Parse Request">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/java
-var body = payload
----
-{
-    id: uuid(),
-    targetUrl: body.targetUrl default "http://localhost:8888/api/health",
-    method: upper(body.method default "GET"),
-    concurrency: body.concurrency default 5,
-    duration: body.duration default 30,
-    requestCount: body.requestCount,
-    headers: body.headers default {},
-    body: body.body,
-    status: "running",
-    createdAt: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"},
-    totalRequests: 0,
-    successCount: 0,
-    errorCount: 0
-}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
-
-        <set-variable variableName="testConfig" value="#[payload]" doc:name="Store Test Config"/>
-        <set-variable variableName="testId" value="#[payload.id]" doc:name="Store Test ID"/>
-
-        <!-- Save test to ObjectStore -->
-        <os:store key="#[vars.testId]" objectStore="test-store" doc:name="Save Test State">
-            <os:value>#[vars.testConfig]</os:value>
-        </os:store>
-
-        <!-- Save test ID to list -->
-        <flow-ref name="add-test-to-list-flow" doc:name="Add to Test List"/>
-
-        <!-- Start load generation asynchronously -->
-        <async doc:name="Start Load Test Async">
-            <flow-ref name="execute-load-test-flow" doc:name="Execute Load Test"/>
-        </async>
-
-        <!-- Return test info -->
-        <ee:transform doc:name="Response">
+        <ee:transform doc:name="Start Test via Java">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
+var body = payload
+var testId = uuid()
+var url = body.targetUrl default "http://localhost:8888/api/health"
+var method = upper(body.method default "GET")
+var concurrency = body.concurrency default 5
+var duration = body.duration default 30
+var warmup = body.warmup default 0
+var javaId = java!com::mycompany::perf::LoadRunner::start(
+    testId, url, method, concurrency, duration, warmup
+)
 ---
 {
-    id: vars.testConfig.id,
+    id: javaId,
     status: "running",
-    targetUrl: vars.testConfig.targetUrl,
-    method: vars.testConfig.method,
-    concurrency: vars.testConfig.concurrency,
-    duration: vars.testConfig.duration,
-    requestCount: vars.testConfig.requestCount,
-    createdAt: vars.testConfig.createdAt,
+    targetUrl: url,
+    method: method,
+    concurrency: concurrency,
+    duration: duration,
+    warmup: warmup,
     message: "Load test started"
 }]]></ee:set-payload>
             </ee:message>
         </ee:transform>
-
         <set-variable variableName="httpStatus" value="#[201]" doc:name="Set 201"/>
     </sub-flow>
 
     <!-- GET /api/tests - List all tests -->
     <sub-flow name="list-tests-flow" doc:name="List Tests">
-        <os:retrieve key="test-id-list" objectStore="test-store" doc:name="Get Test ID List">
-            <os:default-value>#[output application/java --- []]</os:default-value>
-        </os:retrieve>
-
-        <set-variable variableName="testIds" value="#[payload]" doc:name="Store IDs"/>
-
-        <ee:transform doc:name="Init Results">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/java
----
-[]]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
-
-        <set-variable variableName="results" value="#[payload]" doc:name="Store Results"/>
-
-        <foreach collection="#[vars.testIds]" doc:name="For Each Test ID">
-            <os:retrieve key="#[payload]" objectStore="test-store" doc:name="Get Test">
-                <os:default-value>#[output application/java --- null]</os:default-value>
-            </os:retrieve>
-
-            <choice doc:name="If Test Exists">
-                <when expression="#[payload != null]">
-                    <set-variable variableName="results" value="#[vars.results + [payload]]" doc:name="Add to Results"/>
-                </when>
-                <otherwise>
-                    <logger level="DEBUG" message="Test not found, skipping" doc:name="Skip"/>
-                </otherwise>
-            </choice>
-        </foreach>
-
-        <ee:transform doc:name="Format Response">
+        <ee:transform doc:name="Get Test List from Java">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
+var javaTests = java!com::mycompany::perf::LoadRunner::list()
 ---
 {
-    tests: vars.results map (test) -> {
+    tests: javaTests map (test) -> {
         id: test.id,
         status: test.status,
         targetUrl: test.targetUrl,
         method: test.method,
         concurrency: test.concurrency,
-        duration: test.duration,
-        totalRequests: test.totalRequests default 0,
-        createdAt: test.createdAt
+        totalRequests: test.totalRequests default 0
     },
-    count: sizeOf(vars.results)
+    count: sizeOf(javaTests)
 }]]></ee:set-payload>
             </ee:message>
         </ee:transform>
     </sub-flow>
 
-    <!-- GET /api/tests/{id} - Get test details -->
+    <!-- GET /api/tests/{id} - Get test details (same as metrics) -->
     <sub-flow name="get-test-flow" doc:name="Get Test">
-        <os:retrieve key="#[vars.testId]" objectStore="test-store" doc:name="Get Test State">
-            <os:default-value>#[output application/java --- null]</os:default-value>
-        </os:retrieve>
-
-        <choice doc:name="Test Exists?">
-            <when expression="#[payload != null]">
-                <ee:transform doc:name="Format Response">
-                    <ee:message>
-                        <ee:set-payload><![CDATA[%dw 2.0
+        <ee:transform doc:name="Get Test from Java">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
 output application/json
+var metrics = java!com::mycompany::perf::LoadRunner::status(vars.testId)
 ---
-payload]]></ee:set-payload>
-                    </ee:message>
-                </ee:transform>
+if (metrics != null) metrics
+else {error: "Not Found", message: "Test " ++ (vars.testId default "") ++ " not found"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <choice doc:name="Found?">
+            <when expression="#[payload.error != null]">
+                <set-variable variableName="httpStatus" value="#[404]" doc:name="Set 404"/>
             </when>
             <otherwise>
-                <set-variable variableName="httpStatus" value="#[404]" doc:name="Set 404"/>
-                <ee:transform doc:name="Not Found">
-                    <ee:message>
-                        <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{error: "Not Found", message: "Test " ++ (vars.testId default "") ++ " not found"}]]></ee:set-payload>
-                    </ee:message>
-                </ee:transform>
+                <logger level="DEBUG" message="Test found" doc:name="Found"/>
             </otherwise>
         </choice>
     </sub-flow>
 
     <!-- DELETE /api/tests/{id} - Stop a running test -->
     <sub-flow name="stop-test-flow" doc:name="Stop Test">
-        <os:retrieve key="#[vars.testId]" objectStore="test-store" doc:name="Get Test State">
-            <os:default-value>#[output application/java --- null]</os:default-value>
-        </os:retrieve>
-
-        <choice doc:name="Test Exists?">
-            <when expression="#[payload != null]">
-                <set-variable variableName="testConfig" value="#[payload]" doc:name="Store Config"/>
-
-                <!-- Stop Java LoadRunner if running -->
-                <os:retrieve key="#[vars.testId ++ '-java']" objectStore="test-store" doc:name="Get Java Test ID">
-                    <os:default-value>#[output application/java --- null]</os:default-value>
-                </os:retrieve>
-                <set-variable variableName="javaStopResult" value="#[if (payload != null) java!com::mycompany::perf::LoadRunner::stop(payload) else null]" doc:name="Stop Java LoadRunner"/>
-
-                <ee:transform doc:name="Update Status to Stopped">
-                    <ee:message>
-                        <ee:set-payload><![CDATA[%dw 2.0
-output application/java
----
-vars.testConfig ++ {
-    status: "stopped",
-    stoppedAt: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"}
-}]]></ee:set-payload>
-                    </ee:message>
-                </ee:transform>
-
-                <os:store key="#[vars.testId]" objectStore="test-store" doc:name="Save Updated State">
-                    <os:value>#[payload]</os:value>
-                </os:store>
-
-                <ee:transform doc:name="Response">
-                    <ee:message>
-                        <ee:set-payload><![CDATA[%dw 2.0
+        <ee:transform doc:name="Stop Test via Java">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
 output application/json
+var result = java!com::mycompany::perf::LoadRunner::stop(vars.testId)
 ---
 {
     id: vars.testId,
-    status: "stopped",
-    message: "Test stopped"
+    stopped: result.stopped,
+    status: if (result.stopped) "stopped" else "not_found",
+    message: if (result.stopped) "Test stopped" else "Test not found"
 }]]></ee:set-payload>
-                    </ee:message>
-                </ee:transform>
+            </ee:message>
+        </ee:transform>
+        <choice doc:name="Found?">
+            <when expression="#[payload.stopped == false]">
+                <set-variable variableName="httpStatus" value="#[404]" doc:name="Set 404"/>
             </when>
             <otherwise>
-                <set-variable variableName="httpStatus" value="#[404]" doc:name="Set 404"/>
-                <ee:transform doc:name="Not Found">
-                    <ee:message>
-                        <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{error: "Not Found", message: "Test " ++ (vars.testId default "") ++ " not found"}]]></ee:set-payload>
-                    </ee:message>
-                </ee:transform>
+                <logger level="DEBUG" message="Test stopped" doc:name="Stopped"/>
             </otherwise>
         </choice>
-    </sub-flow>
-
-    <!-- Helper: Add test ID to the list -->
-    <sub-flow name="add-test-to-list-flow" doc:name="Add Test to List">
-        <os:retrieve key="test-id-list" objectStore="test-store" doc:name="Get Current List">
-            <os:default-value>#[output application/java --- []]</os:default-value>
-        </os:retrieve>
-
-        <set-variable variableName="currentList" value="#[payload]" doc:name="Store Current List"/>
-
-        <os:store key="test-id-list" objectStore="test-store" doc:name="Save Updated List">
-            <os:value>#[vars.currentList + [vars.testId]]</os:value>
-        </os:store>
     </sub-flow>
 
 </mule>

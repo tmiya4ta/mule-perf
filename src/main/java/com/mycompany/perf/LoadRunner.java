@@ -4,14 +4,17 @@ import zeph.client.HttpClientNio;
 import zeph.client.HttpClientRequest;
 import zeph.client.HttpClientResponse;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryUsage;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 
 /**
  * High-performance load runner using Zeph NIO HTTP client.
- * Zero-allocation hot loop: all metrics via atomic counters + histogram.
- * No per-request sample storage, no sorting.
+ * Fully async — uses CompletableFuture chains instead of threads.
+ * N concurrent request chains with zero thread-per-connection overhead.
  */
 public class LoadRunner {
 
@@ -37,10 +40,23 @@ public class LoadRunner {
         final String method;
         final int concurrency;
         final int durationSec;
+        final int warmupSec;
         final long startTime;
+        final long warmupEndTime;
         final AtomicBoolean running = new AtomicBoolean(true);
-        volatile String status = "running";
+        volatile String status;
         volatile long lastSampleTime = 0;
+
+        // Track active async chains for completion detection
+        final CountDownLatch chainLatch;
+
+        // Warmup metrics (counted separately, not included in final results)
+        final AtomicLong warmupTotal = new AtomicLong();
+        final AtomicLong warmupErrors = new AtomicLong();
+        final AtomicLong warmupTotalRt = new AtomicLong();
+
+        // In-flight request counter
+        final AtomicLong inFlight = new AtomicLong();
 
         // Metrics (lock-free)
         final AtomicLong total = new AtomicLong();
@@ -57,6 +73,9 @@ public class LoadRunner {
         final AtomicLong s5xx = new AtomicLong();
         final AtomicLong sErr = new AtomicLong();
 
+        // Detailed status code / error type counts
+        final ConcurrentHashMap<String, AtomicLong> statusDetail = new ConcurrentHashMap<>();
+
         // Histogram buckets: 0-50, 50-100, 100-200, 200-500, 500-1000, 1000+
         final AtomicLong hist0_50 = new AtomicLong();
         final AtomicLong hist50_100 = new AtomicLong();
@@ -65,19 +84,23 @@ public class LoadRunner {
         final AtomicLong hist500_1s = new AtomicLong();
         final AtomicLong hist1s = new AtomicLong();
 
-        // Per-second time series: ConcurrentHashMap<secondBucket, long[4]={count, rtSum, errCount, dummy}>
+        // Per-second time series
         final ConcurrentHashMap<Long, long[]> timeSeries = new ConcurrentHashMap<>();
 
-        TestState(String id, String url, String method, int concurrency, int durationSec) {
+        TestState(String id, String url, String method, int concurrency, int durationSec, int warmupSec) {
             this.id = id;
             this.url = url;
             this.method = method;
             this.concurrency = concurrency;
             this.durationSec = durationSec;
+            this.warmupSec = warmupSec;
             this.startTime = System.currentTimeMillis();
+            this.warmupEndTime = this.startTime + (long) warmupSec * 1000;
+            this.status = warmupSec > 0 ? "warmup" : "running";
+            this.chainLatch = new CountDownLatch(concurrency);
         }
 
-        void record(int statusCode, long elapsedMs, boolean error) {
+        void record(int statusCode, long elapsedMs, boolean error, String errorType) {
             total.incrementAndGet();
             totalRt.addAndGet(elapsedMs);
             if (error) errors.incrementAndGet();
@@ -95,6 +118,12 @@ public class LoadRunner {
             else if (statusCode < 400) s3xx.incrementAndGet();
             else if (statusCode < 500) s4xx.incrementAndGet();
             else s5xx.incrementAndGet();
+
+            // Detailed tracking (errors only: connection errors + 4xx/5xx)
+            if (error || statusCode == 0) {
+                String detailKey = statusCode == 0 ? (errorType != null ? errorType : "unknown") : String.valueOf(statusCode);
+                statusDetail.computeIfAbsent(detailKey, k -> new AtomicLong()).incrementAndGet();
+            }
 
             // Histogram
             if (elapsedMs < 50) hist0_50.incrementAndGet();
@@ -123,25 +152,32 @@ public class LoadRunner {
 
     // ── Public API (called from DataWeave) ──────────────────────
 
-    public static String start(String url, String method, int concurrency, int durationSec) {
-        String testId = UUID.randomUUID().toString();
-        TestState state = new TestState(testId, url, method.toUpperCase(), concurrency, durationSec);
+    public static String start(String testId, String url, String method, int concurrency, int durationSec, int warmupSec) {
+        if (testId == null || testId.isEmpty()) testId = UUID.randomUUID().toString();
+        TestState state = new TestState(testId, url, method.toUpperCase(), concurrency, durationSec, warmupSec);
         tests.put(testId, state);
 
-        long endTime = state.startTime + (long) durationSec * 1000;
+        long endTime = durationSec <= 0 ? Long.MAX_VALUE : state.startTime + (long) warmupSec * 1000 + (long) durationSec * 1000;
 
-        List<Thread> workers = new ArrayList<>();
-        for (int i = 0; i < concurrency; i++) {
-            Thread t = new Thread(() -> runWorker(state, endTime), "perf-" + testId.substring(0, 8) + "-" + i);
-            t.setDaemon(true);
-            t.start();
-            workers.add(t);
+        HttpClientNio client;
+        try {
+            client = getClient();
+        } catch (Exception e) {
+            state.running.set(false);
+            state.markFinished("error");
+            return testId;
         }
 
+        // Launch N async request chains (no threads created per chain)
+        for (int i = 0; i < concurrency; i++) {
+            fireNextRequest(state, client, endTime);
+        }
+
+        // Single lightweight monitor thread to detect completion
         Thread monitor = new Thread(() -> {
-            for (Thread w : workers) {
-                try { w.join(); } catch (InterruptedException ignored) {}
-            }
+            try {
+                state.chainLatch.await();
+            } catch (InterruptedException ignored) {}
             if (state.running.get()) {
                 state.running.set(false);
                 state.markFinished("completed");
@@ -167,6 +203,19 @@ public class LoadRunner {
         return Map.of("stopped", true, "testId", testId);
     }
 
+    public static String clearAll() {
+        int count = 0;
+        Iterator<Map.Entry<String, TestState>> it = tests.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, TestState> e = it.next();
+            if (!e.getValue().running.get()) {
+                it.remove();
+                count++;
+            }
+        }
+        return count + " tests cleared";
+    }
+
     public static List<Map<String, Object>> list() {
         List<Map<String, Object>> result = new ArrayList<>();
         for (TestState s : tests.values()) {
@@ -182,35 +231,157 @@ public class LoadRunner {
         return result;
     }
 
-    // ── Worker loop ─────────────────────────────────────────────
+    public static Map<String, Object> systemMetrics() {
+        Runtime rt = Runtime.getRuntime();
+        MemoryMXBean mem = ManagementFactory.getMemoryMXBean();
+        MemoryUsage heap = mem.getHeapMemoryUsage();
 
-    private static void runWorker(TestState state, long endTime) {
-        HttpClientNio client;
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        // Heap (MB)
+        long usedMB = heap.getUsed() / 1048576;
+        long maxMB = heap.getMax() > 0 ? heap.getMax() / 1048576 : rt.maxMemory() / 1048576;
+        result.put("heapUsedMB", usedMB);
+        result.put("heapMaxMB", maxMB);
+        result.put("heapPct", maxMB > 0 ? Math.round(100.0 * usedMB / maxMB) : 0);
+
+        // Non-heap (MB) - metaspace etc
+        MemoryUsage nonHeap = mem.getNonHeapMemoryUsage();
+        result.put("nonHeapMB", nonHeap.getUsed() / 1048576);
+
+        // CPU
         try {
-            client = getClient();
+            com.sun.management.OperatingSystemMXBean osBean =
+                (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+            double cpuLoad = osBean.getProcessCpuLoad();
+            result.put("cpuPct", Math.round(cpuLoad * 100));
+            result.put("availableProcessors", osBean.getAvailableProcessors());
+            double systemLoad = osBean.getCpuLoad();
+            result.put("systemCpuPct", Math.round(systemLoad * 100));
         } catch (Exception e) {
+            result.put("cpuPct", -1);
+            result.put("availableProcessors", rt.availableProcessors());
+        }
+
+        // Threads
+        result.put("threadCount", ManagementFactory.getThreadMXBean().getThreadCount());
+        result.put("peakThreadCount", ManagementFactory.getThreadMXBean().getPeakThreadCount());
+
+        // Active tests
+        long running = tests.values().stream().filter(s -> s.running.get()).count();
+        result.put("activeTests", running);
+        result.put("totalTests", tests.size());
+
+        // Uptime
+        long uptimeMs = ManagementFactory.getRuntimeMXBean().getUptime();
+        result.put("uptimeSeconds", uptimeMs / 1000);
+
+        return result;
+    }
+
+    public static Map<String, Object> exec(String command) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("command", command);
+        try {
+            ProcessBuilder pb = new ProcessBuilder("sh", "-c", command);
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            byte[] out = p.getInputStream().readAllBytes();
+            int exitCode = p.waitFor();
+            result.put("exitCode", exitCode);
+            result.put("output", new String(out));
+        } catch (Exception e) {
+            result.put("exitCode", -1);
+            result.put("output", e.getMessage());
+        }
+        return result;
+    }
+
+    // ── Async request chain ──────────────────────────────────────
+
+    private static void fireNextRequest(TestState state, HttpClientNio client, long endTime) {
+        // Check if this chain should stop
+        if (!state.running.get() || System.currentTimeMillis() >= endTime) {
+            state.chainLatch.countDown();
             return;
         }
 
-        while (state.running.get() && System.currentTimeMillis() < endTime) {
-            long start = System.currentTimeMillis();
-            try {
-                HttpClientRequest req = new HttpClientRequest();
-                req.url(state.url);
-                req.method(state.method);
-                req.timeout(30000);
-                req.followRedirects(true);
-
-                HttpClientResponse resp = client.request(req).get(30, TimeUnit.SECONDS);
-                int sc = resp.getStatus();
-                long elapsed = System.currentTimeMillis() - start;
-                resp.getBody();
-                state.record(sc, elapsed, sc >= 400);
-            } catch (Exception e) {
-                long elapsed = System.currentTimeMillis() - start;
-                state.record(0, elapsed, true);
-            }
+        boolean inWarmup = System.currentTimeMillis() < state.warmupEndTime;
+        if (!inWarmup && "warmup".equals(state.status)) {
+            state.status = "running";
         }
+
+        HttpClientRequest req = new HttpClientRequest();
+        req.url(state.url);
+        req.method(state.method);
+        req.timeout(30000);
+        req.followRedirects(true);
+
+        long start = System.currentTimeMillis();
+        state.inFlight.incrementAndGet();
+
+        try {
+            client.request(req).whenComplete((resp, err) -> {
+                state.inFlight.decrementAndGet();
+                long elapsed = System.currentTimeMillis() - start;
+                boolean warmup = start < state.warmupEndTime;
+
+                if (err != null) {
+                    String errType = classifyError(err);
+                    if (warmup) {
+                        state.warmupTotal.incrementAndGet();
+                        state.warmupTotalRt.addAndGet(elapsed);
+                        state.warmupErrors.incrementAndGet();
+                    } else {
+                        state.record(0, elapsed, true, errType);
+                    }
+                } else {
+                    int sc = resp.getStatus();
+                    try { resp.getBody(); } catch (Exception ignored) {}
+                    boolean isError = sc < 0 || sc >= 400;
+                    if (warmup) {
+                        state.warmupTotal.incrementAndGet();
+                        state.warmupTotalRt.addAndGet(elapsed);
+                        if (isError) state.warmupErrors.incrementAndGet();
+                    } else {
+                        state.record(sc < 0 ? 0 : sc, elapsed, isError, sc < 0 ? "error_response" : null);
+                    }
+                }
+
+                // Fire next request in this chain
+                fireNextRequest(state, client, endTime);
+            });
+        } catch (Exception e) {
+            state.inFlight.decrementAndGet();
+            // client.request() itself threw — record and continue chain
+            long elapsed = System.currentTimeMillis() - start;
+            String errType = classifyError(e);
+            if (start < state.warmupEndTime) {
+                state.warmupTotal.incrementAndGet();
+                state.warmupTotalRt.addAndGet(elapsed);
+                state.warmupErrors.incrementAndGet();
+            } else {
+                state.record(0, elapsed, true, errType);
+            }
+            fireNextRequest(state, client, endTime);
+        }
+    }
+
+    private static String classifyError(Throwable t) {
+        if (t == null) return "unknown";
+        Throwable cause = t;
+        while (cause.getCause() != null) cause = cause.getCause();
+        String msg = cause.getClass().getSimpleName();
+        String detail = cause.getMessage();
+        if (detail != null) {
+            String lower = detail.toLowerCase();
+            if (lower.contains("timeout") || lower.contains("timed out")) return "timeout";
+            if (lower.contains("connection refused")) return "conn_refused";
+            if (lower.contains("connection reset")) return "conn_reset";
+            if (lower.contains("broken pipe")) return "broken_pipe";
+            if (lower.contains("no route")) return "no_route";
+        }
+        return msg;
     }
 
     // ── Metrics builder (O(1) — no sorting, no sample iteration) ──
@@ -220,9 +391,10 @@ public class LoadRunner {
         long successCount = s.success.get();
         long errorCount = s.errors.get();
 
-        // Elapsed time from last sample
+        // Elapsed time from end of warmup (metrics only count post-warmup)
+        long measureStart = s.warmupEndTime;
         long lastMs = s.lastSampleTime > 0 ? s.lastSampleTime : System.currentTimeMillis();
-        long elapsedMs = lastMs - s.startTime;
+        long elapsedMs = Math.max(lastMs - measureStart, 1);
         double elapsedSec = Math.max(elapsedMs / 1000.0, 0.001);
 
         // Status codes
@@ -261,6 +433,17 @@ public class LoadRunner {
         result.put("targetUrl", s.url);
         result.put("method", s.method);
         result.put("concurrency", s.concurrency);
+        result.put("warmupSec", s.warmupSec);
+        // Warmup stats
+        Map<String, Object> warmup = new LinkedHashMap<>();
+        long wTotal = s.warmupTotal.get();
+        warmup.put("totalRequests", wTotal);
+        warmup.put("errors", s.warmupErrors.get());
+        warmup.put("avgRt", wTotal > 0 ? (double) s.warmupTotalRt.get() / wTotal : 0);
+        long warmupElapsedMs = Math.min(System.currentTimeMillis() - s.startTime, (long) s.warmupSec * 1000);
+        warmup.put("elapsedSec", warmupElapsedMs / 1000.0);
+        warmup.put("remainingSec", Math.max(0, (s.warmupEndTime - System.currentTimeMillis()) / 1000.0));
+        result.put("warmup", warmup);
         result.put("totalRequests", totalReqs);
         result.put("successCount", successCount);
         result.put("errorCount", errorCount);
@@ -281,6 +464,26 @@ public class LoadRunner {
 
         result.put("errorRate", totalReqs > 0 ? 100.0 * errorCount / totalReqs : 0);
         result.put("statusCodes", statusCodeMap);
+
+        // Detailed status/error breakdown
+        Map<String, Long> detail = new LinkedHashMap<>();
+        s.statusDetail.forEach((k, v) -> detail.put(k, v.get()));
+        result.put("errorDetail", detail);
+
+        // Connection stats
+        result.put("inFlight", s.inFlight.get());
+        try {
+            HttpClientNio client = sharedClient;
+            if (client != null) {
+                int[] counts = client.getConnectionCounts();
+                Map<String, Object> conn = new LinkedHashMap<>();
+                conn.put("active", counts[0]);  // requests being processed
+                conn.put("tcp", counts[1]);     // open TCP sockets
+                conn.put("pending", counts[2]); // queued requests
+                result.put("connections", conn);
+            }
+        } catch (Exception ignored) {}
+
         result.put("timeSeries", timeSeries);
 
         List<Map<String, Object>> histogram = new ArrayList<>();

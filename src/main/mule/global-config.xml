@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mule xmlns="http://www.mulesoft.org/schema/mule/core"
       xmlns:http="http://www.mulesoft.org/schema/mule/http"
-      xmlns:os="http://www.mulesoft.org/schema/mule/os"
       xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="
         http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-        http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
 
     <global-property doc:name="mule.env" name="mule.env" value="local"/>
 
@@ -18,31 +16,10 @@
         <http:listener-connection host="0.0.0.0" port="${http.port}"/>
     </http:listener-config>
 
-    <!-- HTTP Request config for load testing (url override used per request) -->
+    <!-- HTTP Request config for test-connection (url override used per request) -->
     <http:request-config name="http-request-config" doc:name="HTTP Request Config"
                          responseTimeout="${request.timeout}">
         <http:request-connection host="localhost" port="80"/>
     </http:request-config>
-
-    <!-- ObjectStore for test state -->
-    <os:object-store name="test-store" doc:name="Test Store"
-                     persistent="false"
-                     maxEntries="100"
-                     entryTtl="3600"
-                     entryTtlUnit="SECONDS"/>
-
-    <!-- ObjectStore for metrics data -->
-    <os:object-store name="metrics-store" doc:name="Metrics Store"
-                     persistent="false"
-                     maxEntries="10000"
-                     entryTtl="3600"
-                     entryTtlUnit="SECONDS"/>
-
-    <!-- ObjectStore for active worker tracking -->
-    <os:object-store name="worker-store" doc:name="Worker Store"
-                     persistent="false"
-                     maxEntries="1000"
-                     entryTtl="3600"
-                     entryTtlUnit="SECONDS"/>
 
 </mule>

@@ -49,17 +49,11 @@
 			<version>1.2.7</version>
 			<classifier>mule-plugin</classifier>
 		</dependency>
-		<dependency>
-			<groupId>org.mule.connectors</groupId>
-			<artifactId>mule-objectstore-connector</artifactId>
-			<version>1.2.2</version>
-			<classifier>mule-plugin</classifier>
-		</dependency>
 		<!-- Zeph NIO HTTP Client (for high-perf load testing) -->
 		<dependency>
 			<groupId>io.gitlab.myst3m</groupId>
 			<artifactId>zeph</artifactId>
-			<version>0.3.1</version>
+			<version>0.3.3</version>
 		</dependency>
 	</dependencies>
 
@@ -81,6 +75,11 @@
 			<name>MuleSoft EE Releases Repository</name>
 			<url>https://repository.mulesoft.org/nexus/content/repositories/releases-ee/</url>
 			<layout>default</layout>
+		</repository>
+		<repository>
+			<id>clojars</id>
+			<name>Clojars</name>
+			<url>https://repo.clojars.org/</url>
 		</repository>
 	</repositories>
 
