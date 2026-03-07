@@ -88,14 +88,40 @@ java!com::mycompany::perf::LoadRunner::systemMetrics()]]></ee:set-payload>
                 </ee:transform>
             </when>
 
-            <!-- POST /api/exec - Execute OS command -->
+            <!-- POST /api/exec-key - Generate exec key (one-shot, cannot regenerate) -->
+            <when expression="#[vars.method == 'POST' and vars.path == '/api/exec-key']">
+                <ee:transform doc:name="Generate Key">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var key = java!com::mycompany::perf::LoadRunner::generateExecKey()
+---
+if (key != null) {key: key}
+else {error: "Exec key already set. Redeploy to reset."}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- GET /api/exec-key - Check if exec key is set -->
+            <when expression="#[vars.method == 'GET' and vars.path == '/api/exec-key']">
+                <ee:transform doc:name="Check Key">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{set: java!com::mycompany::perf::LoadRunner::isExecKeySet()}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- POST /api/exec - Execute OS command (requires exec key) -->
             <when expression="#[vars.method == 'POST' and vars.path == '/api/exec']">
                 <ee:transform doc:name="Execute Command">
                     <ee:message>
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-java!com::mycompany::perf::LoadRunner::exec(payload.command)]]></ee:set-payload>
+java!com::mycompany::perf::LoadRunner::exec(payload.command, payload.key)]]></ee:set-payload>
                     </ee:message>
                 </ee:transform>
             </when>

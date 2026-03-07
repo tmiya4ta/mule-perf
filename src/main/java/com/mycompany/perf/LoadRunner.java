@@ -20,6 +20,7 @@ public class LoadRunner {
 
     private static final ConcurrentHashMap<String, TestState> tests = new ConcurrentHashMap<>();
     private static volatile HttpClientNio sharedClient;
+    private static volatile String execKey = null;
 
     private static HttpClientNio getClient() throws Exception {
         if (sharedClient == null) {
@@ -279,8 +280,26 @@ public class LoadRunner {
         return result;
     }
 
-    public static Map<String, Object> exec(String command) {
+    public static String generateExecKey() {
+        if (execKey != null) return null; // already set, cannot regenerate
+        execKey = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+        return execKey;
+    }
+
+    public static boolean isExecKeySet() {
+        return execKey != null;
+    }
+
+    public static Map<String, Object> exec(String command, String key) {
         Map<String, Object> result = new LinkedHashMap<>();
+        if (execKey == null) {
+            result.put("error", "No exec key generated. Generate a key first.");
+            return result;
+        }
+        if (!execKey.equals(key)) {
+            result.put("error", "Invalid exec key.");
+            return result;
+        }
         result.put("command", command);
         try {
             ProcessBuilder pb = new ProcessBuilder("sh", "-c", command);

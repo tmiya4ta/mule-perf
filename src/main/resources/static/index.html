@@ -93,6 +93,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);min-heigh
 .sys-bar{width:48px;height:5px;border-radius:3px;background:var(--border);overflow:hidden;position:relative}
 .sys-bar-fill{height:100%;border-radius:3px;transition:width .8s ease,background .5s}
 .sys-sep{width:1px;height:20px;background:var(--border)}
+.exec-key-btn{
+  display:flex;align-items:center;gap:5px;
+  font-family:var(--font-mono);font-size:.68rem;color:var(--text-tertiary);
+  background:var(--bg);padding:3px 10px;border-radius:var(--radius-xs);
+  border:1px solid var(--border);cursor:pointer;
+}
+.exec-key-btn:hover{border-color:var(--border-hover);color:var(--text-secondary)}
+.exec-key-btn.set{color:var(--green-text);border-color:var(--green);background:var(--green-bg);cursor:pointer}
+.exec-key-btn.set:hover{background:var(--green);color:white}
+.exec-key-btn.set .exec-icon-copy{display:block}
+.exec-key-btn.copied{background:var(--green);color:white;border-color:var(--green)}
 .status-pill{
   display:flex;align-items:center;gap:6px;
   padding:4px 12px 4px 8px;border-radius:20px;
@@ -606,6 +617,7 @@ tr:hover td{background:var(--bg)}
   .pct-grid{grid-template-columns:1fr}
   .topbar{padding:12px 16px}
   .topbar-right .sys-gauge{display:none}
+  .exec-key-btn{display:none}
   .topbar-right .sys-sep{display:none}
   .mobile-menu{width:100%}
 }
@@ -679,6 +691,12 @@ tr:hover td{background:var(--bg)}
       <span class="sys-label">THR</span>
       <span class="sys-val" id="sysThreads">—</span>
     </div>
+    <div class="sys-sep"></div>
+    <button class="exec-key-btn" id="execKeyBtn" onclick="generateExecKey()" title="Generate exec key for OS command API">
+      <svg class="exec-icon-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:13px;height:13px;flex-shrink:0"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+      <svg class="exec-icon-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:13px;height:13px;flex-shrink:0;display:none"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      <span id="execKeyLabel">Exec Key</span>
+    </button>
     <div class="sys-sep"></div>
     <div class="status-pill" id="connectionStatus">
       <span class="dot"></span>
@@ -1922,6 +1940,45 @@ async function pollSystem() {
 }
 pollSystem();
 setInterval(pollSystem, 3000);
+
+// Exec key management (one-shot generation, locked until redeploy)
+let currentExecKey = null;
+function markExecKeySet(key) {
+  const btn = document.getElementById('execKeyBtn');
+  btn.classList.add('set');
+  document.getElementById('execKeyLabel').textContent = key || 'Key Set';
+  if (key) {
+    currentExecKey = key;
+    btn.onclick = copyExecKey;
+    btn.title = 'Click to copy exec key';
+  } else {
+    btn.onclick = null;
+    btn.style.cursor = 'default';
+  }
+}
+async function checkExecKey() {
+  try {
+    const res = await fetch(`${API}/api/exec-key`);
+    const d = await res.json();
+    if (d.set) markExecKeySet(null);
+  } catch(e) {}
+}
+async function generateExecKey() {
+  try {
+    const res = await fetch(`${API}/api/exec-key`, {method:'POST'});
+    const d = await res.json();
+    if (d.key) markExecKeySet(d.key);
+    else if (d.error) markExecKeySet(null);
+  } catch(e) {}
+}
+function copyExecKey() {
+  if (!currentExecKey) return;
+  navigator.clipboard.writeText(currentExecKey);
+  const btn = document.getElementById('execKeyBtn');
+  btn.classList.add('copied');
+  setTimeout(() => btn.classList.remove('copied'), 1500);
+}
+checkExecKey();
 </script>
 </body>
 </html>

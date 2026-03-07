@@ -4,7 +4,7 @@ A high-performance HTTP load testing tool built on MuleSoft Mule 4, featuring a 
 
 All load generation runs in Java using [Zeph](https://gitlab.com/myst3m/zeph) NIO HTTP client with async `CompletableFuture` chains — zero threads per connection, lock-free metrics, O(1) percentile estimation.
 
-![Dashboard](https://img.shields.io/badge/UI-Dark%20Theme%20Dashboard-1a1a2e)
+![Dashboard](docs/dashboard.png)
 
 ## Features
 
@@ -17,7 +17,8 @@ All load generation runs in Java using [Zeph](https://gitlab.com/myst3m/zeph) NI
 - **Test management** — create, stop, list, clear tests via REST API
 - **HTML report generation** — downloadable single-file HTML report with KPIs and charts
 - **System metrics** — heap, CPU, threads, file descriptors, TCP sockstat
-- **OS command execution** — debug endpoint for runtime inspection
+- **Exec key security** — one-shot key generation for OS command execution endpoint
+- **OS command execution** — debug endpoint for runtime inspection (requires exec key)
 
 ## Architecture
 
@@ -71,7 +72,9 @@ http://localhost:8888/
 | `DELETE` | `/api/tests` | Clear finished tests |
 | `POST` | `/api/test-connection` | One-shot connectivity check |
 | `GET` | `/api/system` | System metrics (heap, CPU, threads) |
-| `POST` | `/api/exec` | Execute OS command |
+| `POST` | `/api/exec-key` | Generate exec key (one-shot, locked until redeploy) |
+| `GET` | `/api/exec-key` | Check if exec key is set |
+| `POST` | `/api/exec` | Execute OS command (requires exec key) |
 | `GET` | `/api/health` | Health check |
 
 ### Start a test
@@ -86,6 +89,22 @@ curl -X POST http://localhost:8888/api/tests \
     "duration": 30,
     "warmup": 5
   }'
+```
+
+### Exec Key Security
+
+The OS command execution endpoint (`POST /api/exec`) requires an exec key for security.
+
+1. Click the **Exec Key** button in the dashboard top bar to generate a key
+2. The key is displayed once — click the green area to copy it
+3. The key cannot be regenerated until the app is redeployed
+4. `GET /api/exec-key` only returns `{set: true/false}`, never the key itself
+
+```bash
+# Execute a command with the key
+curl -X POST http://localhost:8888/api/exec \
+  -H "Content-Type: application/json" \
+  -d '{"command": "hostname", "key": "your-exec-key-here"}'
 ```
 
 ## Project Structure
@@ -138,6 +157,8 @@ src/main/
 
 ## Dashboard UI
 
+![Running Test](docs/running.png)
+
 - **Stats cards** — Total requests, RPS, avg response time, error rate + error count + breakdown
 - **Connections** — In-flight requests, TCP socket count
 - **Percentiles sidebar** — P50, P95, P99, min/max
@@ -146,7 +167,7 @@ src/main/
 - **Response Distribution** tab — Status code doughnut + response time histogram
 - **Errors** tab — Horizontal bar chart of error types (timeout, 503, conn_reset, etc.)
 - **Test history** — List of past tests with Report button
-- **Time controls** — Elapsed vs absolute time, timezone selector, chart window (30s–10m)
+- **Time controls** — Elapsed vs absolute time, timezone selector, chart window (30s-10m)
 - **Zoom/pan** — Drag to scroll, mouse wheel to zoom on charts
 
 ## Tech Stack
@@ -158,7 +179,7 @@ src/main/
 | Async Model | CompletableFuture chains |
 | Metrics | AtomicLong + ConcurrentHashMap (lock-free) |
 | Frontend | Vanilla JS + Chart.js 4.4.7 |
-| Styling | CSS custom properties, dark theme |
+| Styling | CSS custom properties, light theme |
 
 ## License
 
