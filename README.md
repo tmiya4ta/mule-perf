@@ -93,7 +93,9 @@ curl -X POST http://localhost:8888/api/tests \
 
 ### Exec Key Security
 
-The OS command execution endpoint (`POST /api/exec`) requires an exec key for security.
+The OS command execution endpoint (`POST /api/exec`) is a debug feature for inspecting the deployment environment (e.g., hostname, disk usage). It is not required for normal load testing operations.
+
+If no exec key has been set, this endpoint will reject all requests.
 
 1. Click the **Exec Key** button in the dashboard top bar to generate a key
 2. The key is displayed once — click the green area to copy it
