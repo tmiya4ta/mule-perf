@@ -10,12 +10,8 @@ import java.util.concurrent.atomic.*;
 
 /**
  * High-performance load runner using Zeph NIO HTTP client.
- * Called from Mule DataWeave via java! syntax.
- *
- * Usage in DataWeave:
- *   java!com::mycompany::perf::LoadRunner::start(url, method, concurrency, duration)
- *   java!com::mycompany::perf::LoadRunner::status(testId)
- *   java!com::mycompany::perf::LoadRunner::stop(testId)
+ * Zero-allocation hot loop: all metrics via atomic counters + histogram.
+ * No per-request sample storage, no sorting.
  */
 public class LoadRunner {
 
@@ -44,15 +40,24 @@ public class LoadRunner {
         final long startTime;
         final AtomicBoolean running = new AtomicBoolean(true);
         volatile String status = "running";
-        volatile long endTime = 0; // Set when test completes/stops
+        volatile long lastSampleTime = 0;
 
         // Metrics (lock-free)
         final AtomicLong total = new AtomicLong();
         final AtomicLong success = new AtomicLong();
         final AtomicLong errors = new AtomicLong();
-        final ConcurrentHashMap<Integer, AtomicLong> statusCodes = new ConcurrentHashMap<>();
+        final AtomicLong totalRt = new AtomicLong();
+        final AtomicLong minRt = new AtomicLong(999999);
+        final AtomicLong maxRt = new AtomicLong(0);
 
-        // Histogram buckets
+        // Status code groups
+        final AtomicLong s2xx = new AtomicLong();
+        final AtomicLong s3xx = new AtomicLong();
+        final AtomicLong s4xx = new AtomicLong();
+        final AtomicLong s5xx = new AtomicLong();
+        final AtomicLong sErr = new AtomicLong();
+
+        // Histogram buckets: 0-50, 50-100, 100-200, 200-500, 500-1000, 1000+
         final AtomicLong hist0_50 = new AtomicLong();
         final AtomicLong hist50_100 = new AtomicLong();
         final AtomicLong hist100_200 = new AtomicLong();
@@ -60,10 +65,8 @@ public class LoadRunner {
         final AtomicLong hist500_1s = new AtomicLong();
         final AtomicLong hist1s = new AtomicLong();
 
-        // Samples for percentiles & time series (ring buffer)
-        final ConcurrentLinkedQueue<long[]> samples = new ConcurrentLinkedQueue<>();
-        final AtomicInteger sampleCount = new AtomicInteger();
-        static final int MAX_SAMPLES = 100_000;
+        // Per-second time series: ConcurrentHashMap<secondBucket, long[4]={count, rtSum, errCount, dummy}>
+        final ConcurrentHashMap<Long, long[]> timeSeries = new ConcurrentHashMap<>();
 
         TestState(String id, String url, String method, int concurrency, int durationSec) {
             this.id = id;
@@ -76,11 +79,24 @@ public class LoadRunner {
 
         void record(int statusCode, long elapsedMs, boolean error) {
             total.incrementAndGet();
+            totalRt.addAndGet(elapsedMs);
             if (error) errors.incrementAndGet();
             else success.incrementAndGet();
 
-            statusCodes.computeIfAbsent(statusCode, k -> new AtomicLong()).incrementAndGet();
+            // Update min/max atomically
+            long curMin;
+            do { curMin = minRt.get(); } while (elapsedMs < curMin && !minRt.compareAndSet(curMin, elapsedMs));
+            long curMax;
+            do { curMax = maxRt.get(); } while (elapsedMs > curMax && !maxRt.compareAndSet(curMax, elapsedMs));
 
+            // Status code group
+            if (statusCode == 0) sErr.incrementAndGet();
+            else if (statusCode < 300) s2xx.incrementAndGet();
+            else if (statusCode < 400) s3xx.incrementAndGet();
+            else if (statusCode < 500) s4xx.incrementAndGet();
+            else s5xx.incrementAndGet();
+
+            // Histogram
             if (elapsedMs < 50) hist0_50.incrementAndGet();
             else if (elapsedMs < 100) hist50_100.incrementAndGet();
             else if (elapsedMs < 200) hist100_200.incrementAndGet();
@@ -88,26 +104,25 @@ public class LoadRunner {
             else if (elapsedMs < 1000) hist500_1s.incrementAndGet();
             else hist1s.incrementAndGet();
 
-            // Keep bounded samples
-            if (sampleCount.get() < MAX_SAMPLES) {
-                samples.add(new long[]{System.currentTimeMillis(), elapsedMs, statusCode, error ? 1 : 0});
-                sampleCount.incrementAndGet();
+            // Per-second time series bucket
+            long now = System.currentTimeMillis();
+            lastSampleTime = now;
+            long bucket = now - (now % 1000);
+            long[] ts = timeSeries.computeIfAbsent(bucket, k -> new long[3]);
+            synchronized (ts) {
+                ts[0]++; // count
+                ts[1] += elapsedMs; // rtSum
+                if (error) ts[2]++; // errCount
             }
         }
 
         void markFinished(String newStatus) {
-            if (endTime == 0) {
-                endTime = System.currentTimeMillis();
-            }
             status = newStatus;
         }
     }
 
     // ── Public API (called from DataWeave) ──────────────────────
 
-    /**
-     * Start a load test. Returns test ID.
-     */
     public static String start(String url, String method, int concurrency, int durationSec) {
         String testId = UUID.randomUUID().toString();
         TestState state = new TestState(testId, url, method.toUpperCase(), concurrency, durationSec);
@@ -115,7 +130,6 @@ public class LoadRunner {
 
         long endTime = state.startTime + (long) durationSec * 1000;
 
-        // Launch worker threads
         List<Thread> workers = new ArrayList<>();
         for (int i = 0; i < concurrency; i++) {
             Thread t = new Thread(() -> runWorker(state, endTime), "perf-" + testId.substring(0, 8) + "-" + i);
@@ -124,7 +138,6 @@ public class LoadRunner {
             workers.add(t);
         }
 
-        // Monitor thread: wait for completion
         Thread monitor = new Thread(() -> {
             for (Thread w : workers) {
                 try { w.join(); } catch (InterruptedException ignored) {}
@@ -140,18 +153,12 @@ public class LoadRunner {
         return testId;
     }
 
-    /**
-     * Get metrics for a test. Returns a Map suitable for JSON serialization.
-     */
     public static Map<String, Object> status(String testId) {
         TestState s = tests.get(testId);
         if (s == null) return null;
         return buildMetrics(s);
     }
 
-    /**
-     * Stop a running test.
-     */
     public static Map<String, Object> stop(String testId) {
         TestState s = tests.get(testId);
         if (s == null) return Map.of("stopped", false, "testId", testId);
@@ -160,9 +167,6 @@ public class LoadRunner {
         return Map.of("stopped", true, "testId", testId);
     }
 
-    /**
-     * List all tests (summary).
-     */
     public static List<Map<String, Object>> list() {
         List<Map<String, Object>> result = new ArrayList<>();
         for (TestState s : tests.values()) {
@@ -200,7 +204,6 @@ public class LoadRunner {
                 HttpClientResponse resp = client.request(req).get(30, TimeUnit.SECONDS);
                 int sc = resp.getStatus();
                 long elapsed = System.currentTimeMillis() - start;
-                // Consume body to release connection
                 resp.getBody();
                 state.record(sc, elapsed, sc >= 400);
             } catch (Exception e) {
@@ -210,58 +213,44 @@ public class LoadRunner {
         }
     }
 
-    // ── Metrics builder ─────────────────────────────────────────
+    // ── Metrics builder (O(1) — no sorting, no sample iteration) ──
 
     private static Map<String, Object> buildMetrics(TestState s) {
         long totalReqs = s.total.get();
         long successCount = s.success.get();
         long errorCount = s.errors.get();
 
-        // Collect samples once (used for elapsed time, percentiles, time series)
-        long[][] sampleArray = s.samples.toArray(new long[0][]);
-
-        // Use last sample timestamp for elapsed time (avoids RPS dropping after workers stop)
-        long lastSampleMs = s.startTime;
-        long[] rts = new long[sampleArray.length];
-        for (int i = 0; i < sampleArray.length; i++) {
-            if (sampleArray[i][0] > lastSampleMs) lastSampleMs = sampleArray[i][0];
-            rts[i] = sampleArray[i][1];
-        }
-        Arrays.sort(rts);
-        long elapsedMs = lastSampleMs - s.startTime;
+        // Elapsed time from last sample
+        long lastMs = s.lastSampleTime > 0 ? s.lastSampleTime : System.currentTimeMillis();
+        long elapsedMs = lastMs - s.startTime;
         double elapsedSec = Math.max(elapsedMs / 1000.0, 0.001);
 
         // Status codes
         Map<String, Object> statusCodeMap = new LinkedHashMap<>();
-        for (Map.Entry<Integer, AtomicLong> e : s.statusCodes.entrySet()) {
-            statusCodeMap.put(String.valueOf(e.getKey()), e.getValue().get());
-        }
+        if (s.s2xx.get() > 0) statusCodeMap.put("2xx", s.s2xx.get());
+        if (s.s3xx.get() > 0) statusCodeMap.put("3xx", s.s3xx.get());
+        if (s.s4xx.get() > 0) statusCodeMap.put("4xx", s.s4xx.get());
+        if (s.s5xx.get() > 0) statusCodeMap.put("5xx", s.s5xx.get());
+        if (s.sErr.get() > 0) statusCodeMap.put("err", s.sErr.get());
 
-        // Time series (group by second)
-        Map<Long, List<long[]>> buckets = new TreeMap<>();
-        for (long[] sample : sampleArray) {
-            long bucket = sample[0] - (sample[0] % 1000);
-            buckets.computeIfAbsent(bucket, k -> new ArrayList<>()).add(sample);
-        }
+        // Histogram-based percentile estimation
+        long[] hist = {s.hist0_50.get(), s.hist50_100.get(), s.hist100_200.get(),
+                       s.hist200_500.get(), s.hist500_1s.get(), s.hist1s.get()};
+        long[] bucketMid = {25, 75, 150, 350, 750, 1500};
+
+        // Time series
+        TreeMap<Long, long[]> sorted = new TreeMap<>(s.timeSeries);
         List<Map<String, Object>> timeSeries = new ArrayList<>();
-        for (Map.Entry<Long, List<long[]>> e : buckets.entrySet()) {
-            List<long[]> entries = e.getValue();
-            long[] bucketRts = new long[entries.size()];
-            int errCount = 0;
-            long rtSum = 0;
-            for (int i = 0; i < entries.size(); i++) {
-                bucketRts[i] = entries.get(i)[1];
-                rtSum += bucketRts[i];
-                if (entries.get(i)[3] == 1) errCount++;
+        for (Map.Entry<Long, long[]> e : sorted.entrySet()) {
+            long[] ts;
+            synchronized (e.getValue()) {
+                ts = e.getValue().clone();
             }
-            Arrays.sort(bucketRts);
             Map<String, Object> point = new LinkedHashMap<>();
             point.put("timestamp", e.getKey());
-            point.put("rps", entries.size());
-            point.put("avgRt", entries.isEmpty() ? 0 : (double) rtSum / entries.size());
-            point.put("p95Rt", percentile(bucketRts, 0.95));
-            point.put("p99Rt", percentile(bucketRts, 0.99));
-            point.put("errors", errCount);
+            point.put("rps", ts[0]);
+            point.put("avgRt", ts[0] > 0 ? (double) ts[1] / ts[0] : 0);
+            point.put("errors", ts[2]);
             timeSeries.add(point);
         }
 
@@ -277,12 +266,12 @@ public class LoadRunner {
         result.put("errorCount", errorCount);
 
         Map<String, Object> rt = new LinkedHashMap<>();
-        rt.put("avg", rts.length > 0 ? (double) Arrays.stream(rts).sum() / rts.length : 0);
-        rt.put("min", rts.length > 0 ? rts[0] : 0);
-        rt.put("max", rts.length > 0 ? rts[rts.length - 1] : 0);
-        rt.put("p50", percentile(rts, 0.50));
-        rt.put("p95", percentile(rts, 0.95));
-        rt.put("p99", percentile(rts, 0.99));
+        rt.put("avg", totalReqs > 0 ? (double) s.totalRt.get() / totalReqs : 0);
+        rt.put("min", totalReqs > 0 ? s.minRt.get() : 0);
+        rt.put("max", s.maxRt.get());
+        rt.put("p50", pctFromHist(hist, bucketMid, totalReqs, 0.50));
+        rt.put("p95", pctFromHist(hist, bucketMid, totalReqs, 0.95));
+        rt.put("p99", pctFromHist(hist, bucketMid, totalReqs, 0.99));
         result.put("responseTime", rt);
 
         Map<String, Object> throughput = new LinkedHashMap<>();
@@ -295,20 +284,25 @@ public class LoadRunner {
         result.put("timeSeries", timeSeries);
 
         List<Map<String, Object>> histogram = new ArrayList<>();
-        histogram.add(Map.of("label", "0-50ms", "count", s.hist0_50.get()));
-        histogram.add(Map.of("label", "50-100ms", "count", s.hist50_100.get()));
-        histogram.add(Map.of("label", "100-200ms", "count", s.hist100_200.get()));
-        histogram.add(Map.of("label", "200-500ms", "count", s.hist200_500.get()));
-        histogram.add(Map.of("label", "500ms-1s", "count", s.hist500_1s.get()));
-        histogram.add(Map.of("label", "1s+", "count", s.hist1s.get()));
+        histogram.add(Map.of("label", "0-50ms", "count", hist[0]));
+        histogram.add(Map.of("label", "50-100ms", "count", hist[1]));
+        histogram.add(Map.of("label", "100-200ms", "count", hist[2]));
+        histogram.add(Map.of("label", "200-500ms", "count", hist[3]));
+        histogram.add(Map.of("label", "500ms-1s", "count", hist[4]));
+        histogram.add(Map.of("label", "1s+", "count", hist[5]));
         result.put("histogram", histogram);
 
         return result;
     }
 
-    private static long percentile(long[] sorted, double p) {
-        if (sorted.length == 0) return 0;
-        int idx = Math.min((int) (sorted.length * p), sorted.length - 1);
-        return sorted[idx];
+    private static long pctFromHist(long[] hist, long[] mid, long total, double pct) {
+        if (total == 0) return 0;
+        long target = (long) (total * pct);
+        long cumulative = 0;
+        for (int i = 0; i < hist.length; i++) {
+            cumulative += hist[i];
+            if (cumulative >= target) return mid[i];
+        }
+        return mid[mid.length - 1];
     }
 }
