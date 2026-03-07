@@ -31,6 +31,11 @@
         <set-variable variableName="path" value="#[attributes.requestPath]" doc:name="Set Path"/>
 
         <choice doc:name="Route by Method + Path">
+            <!-- POST /api/test-connection - Test connectivity -->
+            <when expression="#[vars.method == 'POST' and vars.path == '/api/test-connection']">
+                <flow-ref name="test-connection-flow" doc:name="Test Connection"/>
+            </when>
+
             <!-- POST /api/tests - Create test -->
             <when expression="#[vars.method == 'POST' and vars.path == '/api/tests']">
                 <flow-ref name="create-test-flow" doc:name="Create Test"/>

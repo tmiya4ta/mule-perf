@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
       xmlns:os="http://www.mulesoft.org/schema/mule/os"
       xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
       xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="
         http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
         http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
         http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
 
@@ -121,6 +123,62 @@ payload ++ {
                 <logger level="DEBUG" message="Already stopped/completed" doc:name="Skip"/>
             </otherwise>
         </choice>
+    </sub-flow>
+
+    <!-- POST /api/test-connection - Send a single request to verify connectivity -->
+    <sub-flow name="test-connection-flow" doc:name="Test Connection">
+        <ee:transform doc:name="Parse Request">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <set-variable variableName="connTestUrl" value="#[payload.targetUrl]" doc:name="Target URL"/>
+        <set-variable variableName="connTestMethod" value="#[payload.method default 'GET']" doc:name="Method"/>
+        <set-variable variableName="connTestStart" value="#[now() as Number {unit: 'milliseconds'}]" doc:name="Start Time"/>
+
+        <try doc:name="Try Connection">
+            <http:request config-ref="http-request-config" method="#[vars.connTestMethod]"
+                          url="#[vars.connTestUrl]" doc:name="Test Request">
+                <http:response-validator>
+                    <http:success-status-code-validator values="100..599"/>
+                </http:response-validator>
+            </http:request>
+
+            <ee:transform doc:name="Success Response">
+                <ee:message>
+                    <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: true,
+    statusCode: attributes.statusCode,
+    elapsed: (now() as Number {unit: "milliseconds"}) - vars.connTestStart,
+    message: "$(attributes.statusCode) $(attributes.reasonPhrase default '')"
+}]]></ee:set-payload>
+                </ee:message>
+            </ee:transform>
+
+            <error-handler>
+                <on-error-continue type="ANY">
+                    <ee:transform doc:name="Error Response">
+                        <ee:message>
+                            <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    success: false,
+    statusCode: 0,
+    elapsed: (now() as Number {unit: "milliseconds"}) - vars.connTestStart,
+    message: error.description default "Connection failed"
+}]]></ee:set-payload>
+                        </ee:message>
+                    </ee:transform>
+                </on-error-continue>
+            </error-handler>
+        </try>
     </sub-flow>
 
 </mule>
