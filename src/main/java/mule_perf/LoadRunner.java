@@ -1,4 +1,4 @@
-package com.mycompany.perf;
+package mule_perf;
 
 import zeph.client.HttpClientNio;
 import zeph.client.HttpClientRequest;
@@ -29,11 +29,25 @@ public class LoadRunner {
     private static OutputStream termStdin;
     private static final StringBuilder termBuffer = new StringBuilder();
     private static volatile boolean termAlive = false;
+    private static volatile int termColumns = 120;
+
+    public static void setTermColumns(int cols) {
+        termColumns = Math.max(40, Math.min(cols, 500));
+        // Update running shell if alive
+        if (termProcess != null && termProcess.isAlive() && termStdin != null) {
+            try {
+                termStdin.write(("stty columns " + termColumns + " 2>/dev/null; export COLUMNS=" + termColumns + "\n").getBytes());
+                termStdin.flush();
+            } catch (Exception ignored) {}
+        }
+    }
 
     private static synchronized void ensureTermProcess() throws Exception {
         if (termProcess != null && termProcess.isAlive()) return;
         ProcessBuilder pb = new ProcessBuilder("sh");
         pb.redirectErrorStream(true);
+        pb.environment().put("COLUMNS", String.valueOf(termColumns));
+        pb.environment().put("TERM", "xterm-256color");
         termProcess = pb.start();
         termStdin = termProcess.getOutputStream();
         termAlive = true;

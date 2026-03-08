@@ -13,7 +13,7 @@
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
-var metrics = java!com::mycompany::perf::LoadRunner::status(vars.testId)
+var metrics = java!mule_perf::LoadRunner::status(vars.testId)
 ---
 if (metrics != null) metrics
 else {error: "Not Found", message: "Test " ++ (vars.testId default "") ++ " not found"}]]></ee:set-payload>

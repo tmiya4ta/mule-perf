@@ -22,7 +22,7 @@ var duration = body.duration default 30
 var warmup = body.warmup default 0
 var sl = body.stepLoad
 var javaId = if (sl != null and sl.enabled == true)
-    java!com::mycompany::perf::LoadRunner::startStepLoad(
+    java!mule_perf::LoadRunner::startStepLoad(
         testId, url, method,
         sl.startConn default 1,
         sl.stepInc default 5,
@@ -33,7 +33,7 @@ var javaId = if (sl != null and sl.enabled == true)
         sl.maxDurationSec default 0
     )
   else
-    java!com::mycompany::perf::LoadRunner::start(
+    java!mule_perf::LoadRunner::start(
         testId, url, method, concurrency, duration, warmup
     )
 ---
@@ -59,7 +59,7 @@ var javaId = if (sl != null and sl.enabled == true)
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
-var javaTests = java!com::mycompany::perf::LoadRunner::list()
+var javaTests = java!mule_perf::LoadRunner::list()
 ---
 {
     tests: javaTests map (test) -> {
@@ -82,7 +82,7 @@ var javaTests = java!com::mycompany::perf::LoadRunner::list()
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
-var metrics = java!com::mycompany::perf::LoadRunner::status(vars.testId)
+var metrics = java!mule_perf::LoadRunner::status(vars.testId)
 ---
 if (metrics != null) metrics
 else {error: "Not Found", message: "Test " ++ (vars.testId default "") ++ " not found"}]]></ee:set-payload>
@@ -104,7 +104,7 @@ else {error: "Not Found", message: "Test " ++ (vars.testId default "") ++ " not 
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
-var result = java!com::mycompany::perf::LoadRunner::stop(vars.testId)
+var result = java!mule_perf::LoadRunner::stop(vars.testId)
 ---
 {
     id: vars.testId,

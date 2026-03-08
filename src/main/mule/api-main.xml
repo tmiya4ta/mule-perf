@@ -65,7 +65,7 @@
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-{ message: java!com::mycompany::perf::LoadRunner::clearAll() }]]></ee:set-payload>
+{ message: java!mule_perf::LoadRunner::clearAll() }]]></ee:set-payload>
                     </ee:message>
                 </ee:transform>
             </when>
@@ -83,7 +83,7 @@ output application/json
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-java!com::mycompany::perf::LoadRunner::systemMetrics()]]></ee:set-payload>
+java!mule_perf::LoadRunner::systemMetrics()]]></ee:set-payload>
                     </ee:message>
                 </ee:transform>
             </when>
@@ -95,7 +95,7 @@ java!com::mycompany::perf::LoadRunner::systemMetrics()]]></ee:set-payload>
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-java!com::mycompany::perf::LoadRunner::generateExecKey(payload.password)]]></ee:set-payload>
+java!mule_perf::LoadRunner::generateExecKey(payload.password)]]></ee:set-payload>
                     </ee:message>
                 </ee:transform>
             </when>
@@ -107,7 +107,7 @@ java!com::mycompany::perf::LoadRunner::generateExecKey(payload.password)]]></ee:
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-{set: java!com::mycompany::perf::LoadRunner::isExecKeySet()}]]></ee:set-payload>
+{set: java!mule_perf::LoadRunner::isExecKeySet()}]]></ee:set-payload>
                     </ee:message>
                 </ee:transform>
             </when>
@@ -119,7 +119,21 @@ output application/json
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-java!com::mycompany::perf::LoadRunner::exec(payload.command, payload.key)]]></ee:set-payload>
+java!mule_perf::LoadRunner::exec(payload.command, payload.key)]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- POST /api/term/resize - Update terminal columns -->
+            <when expression="#[vars.method == 'POST' and vars.path == '/api/term/resize']">
+                <ee:transform doc:name="Term Resize">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var cols = payload.cols default 120
+var x = java!mule_perf::LoadRunner::setTermColumns(cols)
+---
+{ok: true, cols: cols}]]></ee:set-payload>
                     </ee:message>
                 </ee:transform>
             </when>
@@ -131,7 +145,7 @@ java!com::mycompany::perf::LoadRunner::exec(payload.command, payload.key)]]></ee
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-java!com::mycompany::perf::LoadRunner::termWrite(payload.cmd, payload.key)]]></ee:set-payload>
+java!mule_perf::LoadRunner::termWrite(payload.cmd, payload.key)]]></ee:set-payload>
                     </ee:message>
                 </ee:transform>
             </when>
@@ -143,7 +157,7 @@ java!com::mycompany::perf::LoadRunner::termWrite(payload.cmd, payload.key)]]></e
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-java!com::mycompany::perf::LoadRunner::termRead(payload.key)]]></ee:set-payload>
+java!mule_perf::LoadRunner::termRead(payload.key)]]></ee:set-payload>
                     </ee:message>
                 </ee:transform>
             </when>
