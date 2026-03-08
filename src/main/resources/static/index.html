@@ -415,6 +415,13 @@ tr:hover td{background:var(--bg)}
 .num-input input::-webkit-inner-spin-button,
 .num-input input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .num-input input:focus{box-shadow:none!important}
+.step-input{
+  width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-xs);
+  background:var(--white);font-size:.75rem;font-family:var(--font-mono);
+  -moz-appearance:textfield;
+}
+.step-input::-webkit-inner-spin-button,.step-input::-webkit-outer-spin-button{-webkit-appearance:none}
+.step-input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
 .num-spin{
   width:30px;display:flex;align-items:center;justify-content:center;
   color:var(--text-light);font-family:var(--font-mono);font-size:.95rem;
@@ -547,6 +554,122 @@ tr:hover td{background:var(--bg)}
 }
 .nav-item.new-test.disabled{opacity:.25;pointer-events:none}
 
+/* Console nav button */
+.nav-item.console-toggle{
+  color:rgba(255,255,255,.5);
+  transition:background .15s,transform .15s,color .15s;
+}
+.nav-item.console-toggle:hover{color:white;background:rgba(255,255,255,.1);transform:scale(1.08)}
+.nav-item.console-toggle:active{transform:scale(.95)}
+.nav-item.console-toggle.active{background:rgba(255,255,255,.12);color:white}
+
+/* ── Virtual Terminal Panel ── */
+.term-panel{
+  position:fixed;bottom:0;left:0;right:0;height:0;
+  background:#0c0c0c;color:#cccccc;
+  font-family:var(--font-mono);font-size:13px;line-height:1.4;
+  z-index:900;transition:height .3s cubic-bezier(.16,1,.3,1);
+  display:flex;flex-direction:column;
+  box-shadow:0 -4px 24px rgba(0,0,0,.5);
+  overflow:hidden;
+}
+.term-panel.open{height:360px}
+.term-panel.maximized{height:100vh !important}
+.term-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 12px;height:36px;
+  background:#1e1e1e;border-bottom:1px solid #333;
+  flex-shrink:0;user-select:none;
+}
+.term-tabs{display:flex;align-items:stretch;height:100%;gap:0}
+.term-tab{
+  display:flex;align-items:center;gap:6px;padding:0 14px;
+  font-size:12px;color:#888;border-bottom:2px solid transparent;
+  cursor:default;transition:color .15s;
+}
+.term-tab.active{color:#e0e0e0;border-bottom-color:#0078d4}
+.term-tab svg{width:14px;height:14px}
+.term-header-actions{display:flex;align-items:center;gap:2px}
+.term-action{
+  width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+  background:none;border:none;color:#888;cursor:pointer;border-radius:4px;
+  transition:background .12s,color .12s;
+}
+.term-action:hover{background:#333;color:#e0e0e0}
+.term-action svg{width:14px;height:14px}
+.term-body{
+  flex:1;overflow-y:auto;padding:8px 12px;
+  scrollbar-width:thin;scrollbar-color:#333 transparent;
+  cursor:text;
+}
+.term-body::-webkit-scrollbar{width:8px}
+.term-body::-webkit-scrollbar-track{background:transparent}
+.term-body::-webkit-scrollbar-thumb{background:#444;border-radius:4px}
+.term-body::-webkit-scrollbar-thumb:hover{background:#555}
+.term-line{white-space:pre-wrap;word-break:break-all}
+.term-line.out{color:#cccccc}
+.term-line.err{color:#f14c4c}
+.term-line.sys{color:#608b4e;font-style:italic}
+.term-prompt-line{display:flex;align-items:flex-start}
+.term-ps1{color:#6a9955;white-space:nowrap;margin-right:0}
+.term-ps1 .term-user{color:#569cd6}
+.term-ps1 .term-sep{color:#cccccc}
+.term-ps1 .term-cwd{color:#b5cea8}
+.term-ps1 .term-dollar{color:#cccccc;white-space:pre}
+.term-cmd-text{color:#dcdcaa}
+.term-active-line{display:flex;align-items:flex-start}
+.term-active-line .term-inline-input{
+  flex:1;background:none;border:none;outline:none;
+  color:#dcdcaa;font-family:var(--font-mono);font-size:13px;line-height:1.4;
+  caret-color:#aeafad;padding:0;
+}
+.term-busy .term-active-line .term-inline-input{opacity:.5;pointer-events:none}
+.term-busy .term-active-line .term-ps1{opacity:.5}
+@keyframes term-blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* ── Password Modal ── */
+.pw-backdrop{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,.45);z-index:1100;
+  display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(4px);opacity:0;pointer-events:none;
+  transition:opacity .2s ease;
+}
+.pw-backdrop.open{opacity:1;pointer-events:auto}
+.pw-card{
+  background:var(--white);border-radius:var(--radius);
+  padding:28px;width:380px;max-width:90vw;
+  box-shadow:0 20px 60px rgba(0,0,0,.25);
+  transform:translateY(20px) scale(.96);
+  transition:transform .25s cubic-bezier(.16,1,.3,1);
+}
+.pw-backdrop.open .pw-card{transform:translateY(0) scale(1)}
+.pw-title{font-size:1rem;font-weight:700;color:var(--text);margin-bottom:4px}
+.pw-desc{font-size:.78rem;color:var(--text-secondary);margin-bottom:20px}
+.pw-field{position:relative;margin-bottom:20px}
+.pw-field input{
+  width:100%;padding:10px 42px 10px 14px;
+  border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  font-family:var(--font-mono);font-size:14px;color:var(--text);
+  background:var(--bg);outline:none;transition:border-color .15s;
+}
+.pw-field input:focus{border-color:var(--blue)}
+.pw-field input::placeholder{color:var(--text-light)}
+.pw-eye{
+  position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+  background:none;border:none;color:var(--text-tertiary);cursor:pointer;
+  border-radius:4px;transition:color .15s,background .15s;
+}
+.pw-eye:hover{color:var(--text-secondary);background:var(--border)}
+.pw-eye svg{width:18px;height:18px}
+.pw-actions{display:flex;gap:10px;justify-content:flex-end}
+.pw-err{font-size:.75rem;color:var(--red-text);margin:-12px 0 14px;display:none}
+
+.term-resize-handle{
+  position:absolute;top:0;left:0;right:0;height:4px;cursor:ns-resize;
+}
+
 /* ── Hamburger button ── */
 .hamburger{
   display:none;width:36px;height:36px;border:none;background:transparent;
@@ -624,6 +747,26 @@ tr:hover td{background:var(--bg)}
 </style>
 </head>
 <body>
+
+<!-- Password Modal -->
+<div class="pw-backdrop" id="pwModal">
+  <div class="pw-card">
+    <div class="pw-title" id="pwTitle">Exec Key Password</div>
+    <div class="pw-desc" id="pwDesc">Enter a password to protect the exec key. This password will be required to unlock after page reload.</div>
+    <div class="pw-field">
+      <input type="password" id="pwInput" placeholder="Password" autocomplete="off" onkeydown="if(event.key==='Enter')submitPw()">
+      <button class="pw-eye" onclick="togglePwVis()" title="Show/hide password" type="button">
+        <svg id="pwEyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
+    <div class="pw-err" id="pwErr"></div>
+    <div class="pw-actions">
+      <button class="btn btn-ghost" onclick="closePwModal()">Cancel</button>
+      <button class="btn btn-primary" id="pwSubmitBtn" onclick="submitPw()">Unlock</button>
+    </div>
+  </div>
+</div>
+
 <!-- Mobile menu -->
 <div class="mobile-menu-backdrop" id="mobileMenuBackdrop" onclick="toggleMobileMenu()"></div>
 <div class="mobile-menu" id="mobileMenu">
@@ -649,6 +792,10 @@ tr:hover td{background:var(--bg)}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
       Stop Test
     </div>
+    <div class="mobile-menu-item" onclick="toggleMobileMenu();toggleTerminal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+      Console
+    </div>
   </div>
 </div>
 
@@ -660,8 +807,33 @@ tr:hover td{background:var(--bg)}
   <div class="nav-item new-test" id="navNewTest" title="New Test" onclick="toggleDrawer()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
   </div>
+  <div class="nav-item console-toggle" id="navConsole" title="Console" onclick="toggleTerminal()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+  </div>
   <div class="nav-spacer"></div>
 </nav>
+
+<!-- Virtual Terminal Panel -->
+<div class="term-panel" id="termPanel">
+  <div class="term-resize-handle" id="termResizeHandle"></div>
+  <div class="term-header">
+    <div class="term-tabs">
+      <div class="term-tab active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        <span id="termTabLabel">Terminal</span>
+      </div>
+    </div>
+    <div class="term-header-actions">
+      <button class="term-action" onclick="termMaximize()" title="Maximize" id="termMaxBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+      </button>
+      <button class="term-action" onclick="toggleTerminal()" title="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="term-body" id="termOutput" onclick="focusTermInput()"></div>
+</div>
 
 <div class="app-body">
 
@@ -762,12 +934,38 @@ tr:hover td{background:var(--bg)}
               <option value="PATCH">PATCH</option>
             </select>
           </div>
-          <div class="form-group">
+          <div class="form-group" id="concurrencyGroup">
             <label>Concurrency</label>
             <div class="num-input">
               <div class="num-spin minus" onclick="spinNum('concurrency',-1)">&minus;</div>
               <input type="number" id="concurrency" value="5" min="1" max="100">
               <div class="num-spin plus" onclick="spinNum('concurrency',1)">+</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="toggleStepLoad()">
+              <input type="checkbox" id="stepLoadEnabled" style="accent-color:var(--accent);width:14px;height:14px" onclick="event.stopPropagation();toggleStepLoad(this.checked)">
+              Step Load
+            </label>
+            <div id="stepLoadParams" style="display:none;margin-top:6px;display:none;flex-direction:column;gap:6px">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                <div>
+                  <label style="font-size:.65rem;color:var(--text-tertiary)">Start</label>
+                  <input type="number" id="stepStart" value="1" min="1" max="100" class="step-input">
+                </div>
+                <div>
+                  <label style="font-size:.65rem;color:var(--text-tertiary)">Step +</label>
+                  <input type="number" id="stepInc" value="5" min="1" max="50" class="step-input">
+                </div>
+              </div>
+              <div>
+                <label style="font-size:.65rem;color:var(--text-tertiary)">Step Duration (s)</label>
+                <input type="number" id="stepDur" value="30" min="5" max="300" class="step-input">
+              </div>
+              <div>
+                <label style="font-size:.65rem;color:var(--text-tertiary)">Error Threshold (0=off)</label>
+                <input type="number" id="stepErrThreshold" value="0" min="0" max="10000" class="step-input" placeholder="Stop after N errors">
+              </div>
             </div>
           </div>
         </div>
@@ -813,7 +1011,7 @@ tr:hover td{background:var(--bg)}
       <div class="form-block">
         <div class="form-block-title">Timing</div>
         <div class="form-group">
-          <label>Duration (sec)</label>
+          <label id="durationLabel">Duration (sec)</label>
           <div style="display:flex;gap:8px;align-items:stretch">
             <div class="num-input" style="flex:1">
               <div class="num-spin minus" onclick="spinNum('duration',-5)">&minus;</div>
@@ -1021,8 +1219,16 @@ tr:hover td{background:var(--bg)}
         <div style="position:relative;overflow:hidden"><canvas id="statusChart"></canvas></div>
         <div style="position:relative;overflow:hidden"><canvas id="histChart"></canvas></div>
       </div>
-      <div id="distErrors" style="display:none;height:200px;overflow:hidden;position:relative">
-        <canvas id="errorDistChart"></canvas>
+      <div id="distErrors" style="display:none;overflow:hidden;position:relative">
+        <div style="height:180px;position:relative"><canvas id="errorDistChart"></canvas></div>
+        <div class="table-wrap" style="margin-top:8px;max-height:160px;overflow-y:auto">
+          <table id="errorTable" style="font-size:.75rem">
+            <thead><tr><th style="text-align:left">Reason</th><th style="text-align:right">Count</th><th style="text-align:right">%</th></tr></thead>
+            <tbody id="errorTableBody">
+              <tr><td colspan="3" class="empty-state">No errors</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -1485,10 +1691,41 @@ function cancelScheduled() {
   document.getElementById('cancelScheduleBtn').style.display = 'none';
 }
 
+function toggleStepLoad(force) {
+  const cb = document.getElementById('stepLoadEnabled');
+  if (force !== undefined) cb.checked = force; else cb.checked = !cb.checked;
+  const params = document.getElementById('stepLoadParams');
+  const concLabel = document.querySelector('#concurrencyGroup label');
+  const durLabel = document.getElementById('durationLabel');
+  if (cb.checked) {
+    params.style.display = 'flex';
+    concLabel.textContent = 'Max Connections';
+    durLabel.textContent = 'Max Duration (sec)';
+  } else {
+    params.style.display = 'none';
+    concLabel.textContent = 'Concurrency';
+    durLabel.textContent = 'Duration (sec)';
+  }
+}
+
+function validateNumInput(id, min, max, fallback) {
+  const raw = document.getElementById(id).value.trim();
+  if (!/^\d+$/.test(raw)) { document.getElementById(id).value = fallback; return fallback; }
+  const v = parseInt(raw);
+  if (v < min || v > max) { document.getElementById(id).value = Math.min(Math.max(v, min), max); return Math.min(Math.max(v, min), max); }
+  return v;
+}
+
 async function executeTest() {
+  const isStep = document.getElementById('stepLoadEnabled').checked;
+  const concurrency = validateNumInput('concurrency', 1, isStep ? 500 : 100, 5);
+  const duration = validateNumInput('duration', 1, 3600, 30);
+  const warmup = validateNumInput('warmup', 0, 300, 0);
+  const urlVal = document.getElementById('targetUrl').value.trim();
+  if (!urlVal) { alert('Target URL is required'); return; }
   const cfg = {
     targetUrl: (() => {
-      let url = document.getElementById('targetUrl').value.trim();
+      let url = urlVal;
       const qp = document.getElementById('queryParams').value.trim();
       if (qp) {
         const params = qp.split('\n').map(l => l.trim()).filter(l => l).join('&');
@@ -1497,9 +1734,9 @@ async function executeTest() {
       return url;
     })(),
     method: document.getElementById('method').value.trim(),
-    concurrency: parseInt(document.getElementById('concurrency').value.trim()) || 5,
-    duration: (() => { const v = parseInt(document.getElementById('duration').value.trim()); return isNaN(v) ? 30 : v; })(),
-    warmup: parseInt(document.getElementById('warmup').value.trim()) || 0,
+    concurrency: concurrency,
+    duration: duration,
+    warmup: warmup,
     keepAlive: document.getElementById('keepAlive').checked,
     headers: (() => {
       const h = {};
@@ -1511,6 +1748,17 @@ async function executeTest() {
     })(),
     body: document.getElementById('body').value.trim() || null
   };
+  if (document.getElementById('stepLoadEnabled').checked) {
+    cfg.stepLoad = {
+      enabled: true,
+      startConn: validateNumInput('stepStart', 1, 100, 1),
+      stepInc: validateNumInput('stepInc', 1, 50, 5),
+      maxConn: concurrency,
+      stepDurationSec: validateNumInput('stepDur', 5, 300, 30),
+      maxDurationSec: cfg.duration,
+      errorThreshold: validateNumInput('stepErrThreshold', 0, 10000, 0)
+    };
+  }
   try {
     const res = await fetch(`${API}/api/tests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cfg) });
     const data = await res.json();
@@ -1521,7 +1769,8 @@ async function executeTest() {
     document.getElementById('activeTestBar').classList.add('visible');
     document.getElementById('activeMethod').textContent = cfg.method;
     document.getElementById('activeTarget').textContent = cfg.targetUrl;
-    document.getElementById('activeConcurrency').textContent = '\u00d7' + cfg.concurrency;
+    const connLabel = cfg.stepLoad ? `${cfg.stepLoad.startConn}\u2192${cfg.stepLoad.maxConn}` : cfg.concurrency;
+    document.getElementById('activeConcurrency').textContent = '\u00d7' + connLabel;
     if (drawerOpen) toggleDrawer();
     setTestRunning(true);
     resetCharts(); startPolling(); startElapsedTimer(); refreshHistory();
@@ -1575,6 +1824,18 @@ async function pollStats() {
     if (m.status === 'warmup') {
       sl.textContent = 'WARMING UP';
       sl.style.color = 'var(--amber)';
+    } else if (m.status === 'error_threshold') {
+      sl.textContent = 'STOPPED (error limit)';
+      sl.style.color = 'var(--red-text)';
+      stopPolling();
+      document.getElementById('startBtn').textContent = 'Start Test';
+      document.getElementById('startBtn').disabled = false;
+      setTestRunning(false);
+    } else if (m.status === 'completed' || m.status === 'stopped') {
+      stopPolling();
+      document.getElementById('startBtn').textContent = 'Start Test';
+      document.getElementById('startBtn').disabled = false;
+      setTestRunning(false);
     } else {
       sl.textContent = 'RUNNING';
       sl.style.color = 'var(--text-tertiary)';
@@ -1613,13 +1874,22 @@ function updateStats(m) {
     animateValue(document.getElementById('errorRate'), m.errorRate || 0, 1);
     document.getElementById('errorCount').textContent = `${m.errorCount || 0} errors`;
     updateErrorDetail(m.errorDetail);
-    document.getElementById('connInFlight').textContent = m.inFlight || 0;
-    document.getElementById('connTcp').textContent = m.connections?.tcp || 0;
+    if (m.status === 'running' || m.status === 'warmup') {
+      document.getElementById('connInFlight').textContent = m.inFlight || 0;
+      document.getElementById('connTcp').textContent = m.connections?.tcp || 0;
+    }
   }
   animateValue(document.getElementById('p50'), m.responseTime?.p50 || 0, 0);
   animateValue(document.getElementById('p95'), m.responseTime?.p95 || 0, 0);
   animateValue(document.getElementById('p99'), m.responseTime?.p99 || 0, 0);
   document.getElementById('minMax').textContent = `${fmt(m.responseTime?.min, 0)} / ${fmt(m.responseTime?.max, 0)}`;
+  // Step load: update concurrency display
+  if (m.stepLoad) {
+    const sl = m.stepLoad;
+    document.getElementById('activeConcurrency').textContent = `\u00d7${sl.activeConcurrency} (step ${sl.currentStep}/${sl.totalSteps})`;
+  } else {
+    document.getElementById('activeConcurrency').textContent = '\u00d7' + (m.concurrency || '');
+  }
 }
 
 function updateErrorDetail(detail) {
@@ -1663,6 +1933,18 @@ function updateCharts(m) {
   errorDistChart.data.datasets[0].backgroundColor = edEntries.map((_, i) => errorDistColors[i % errorDistColors.length] + 'cc');
   errorDistChart.data.datasets[0].borderColor = edEntries.map((_, i) => errorDistColors[i % errorDistColors.length]);
   errorDistChart.update();
+  // Error table
+  const etb = document.getElementById('errorTableBody');
+  if (edEntries.length === 0) {
+    etb.innerHTML = '<tr><td colspan="3" class="empty-state">No errors</td></tr>';
+  } else {
+    const total = edEntries.reduce((s, [, v]) => s + v, 0);
+    etb.innerHTML = edEntries.map(([k, v], i) => {
+      const pct = total > 0 ? (100 * v / total).toFixed(1) : '0.0';
+      const color = errorDistColors[i % errorDistColors.length];
+      return `<tr><td style="text-align:left"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:6px"></span>${k}</td><td style="text-align:right">${v.toLocaleString()}</td><td style="text-align:right">${pct}%</td></tr>`;
+    }).join('');
+  }
 }
 
 function updateDashboard(m) {
@@ -1941,20 +2223,57 @@ async function pollSystem() {
 pollSystem();
 setInterval(pollSystem, 3000);
 
-// Exec key management (one-shot generation, locked until redeploy)
+// ── Password Modal ──
+let pwResolve = null;
+function openPwModal(title, desc) {
+  document.getElementById('pwTitle').textContent = title || 'Exec Key Password';
+  document.getElementById('pwDesc').textContent = desc || '';
+  document.getElementById('pwInput').value = '';
+  document.getElementById('pwInput').type = 'password';
+  document.getElementById('pwErr').style.display = 'none';
+  document.getElementById('pwModal').classList.add('open');
+  setTimeout(() => document.getElementById('pwInput').focus(), 100);
+  return new Promise(resolve => { pwResolve = resolve; });
+}
+function closePwModal(result) {
+  document.getElementById('pwModal').classList.remove('open');
+  if (pwResolve) { pwResolve(result || null); pwResolve = null; }
+}
+function submitPw() {
+  const pw = document.getElementById('pwInput').value;
+  if (!pw) { const err = document.getElementById('pwErr'); err.textContent = 'Password is required'; err.style.display = 'block'; return; }
+  closePwModal(pw);
+}
+function togglePwVis() {
+  const inp = document.getElementById('pwInput');
+  const isHidden = inp.type === 'password';
+  inp.type = isHidden ? 'text' : 'password';
+  document.getElementById('pwEyeIcon').innerHTML = isHidden
+    ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>'
+    : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+}
+
+// ── Exec Key Management ──
 let currentExecKey = null;
 function markExecKeySet(key) {
   const btn = document.getElementById('execKeyBtn');
   btn.classList.add('set');
-  document.getElementById('execKeyLabel').textContent = key || 'Key Set';
   if (key) {
     currentExecKey = key;
+    document.getElementById('execKeyLabel').textContent = 'Key Ready';
     btn.onclick = copyExecKey;
     btn.title = 'Click to copy exec key';
+    // If terminal is open, init session
+    if (document.getElementById('termPanel').classList.contains('open')) {
+      initTermSession();
+      startTermPoll();
+    }
   } else {
-    btn.onclick = null;
-    btn.style.cursor = 'default';
+    document.getElementById('execKeyLabel').textContent = 'Unlock';
+    btn.onclick = generateExecKey;
+    btn.title = 'Enter password to unlock exec key';
   }
+  updateTermPrompt();
 }
 async function checkExecKey() {
   try {
@@ -1964,11 +2283,46 @@ async function checkExecKey() {
   } catch(e) {}
 }
 async function generateExecKey() {
+  const isFirstTime = !document.getElementById('execKeyBtn').classList.contains('set');
+  const pw = await openPwModal(
+    isFirstTime ? 'Set Exec Key Password' : 'Unlock Exec Key',
+    isFirstTime ? 'Choose a password to protect the exec key. You will need this to unlock after page reload.' : 'Enter the password to regenerate the exec key.'
+  );
+  if (!pw) return;
   try {
-    const res = await fetch(`${API}/api/exec-key`, {method:'POST'});
+    const res = await fetch(`${API}/api/exec-key`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw })
+    });
     const d = await res.json();
     if (d.key) markExecKeySet(d.key);
-    else if (d.error) markExecKeySet(null);
+    else if (d.error) {
+      document.getElementById('pwErr').textContent = d.error;
+      document.getElementById('pwErr').style.display = 'block';
+      document.getElementById('pwModal').classList.add('open');
+      pwResolve = null;
+      // Re-open modal with error
+      const retry = await openPwModal(
+        'Unlock Exec Key', 'Invalid password. Try again.'
+      );
+      if (retry) generateExecKeyWithPw(retry);
+    }
+  } catch(e) {}
+}
+async function generateExecKeyWithPw(pw) {
+  try {
+    const res = await fetch(`${API}/api/exec-key`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw })
+    });
+    const d = await res.json();
+    if (d.key) markExecKeySet(d.key);
+    else if (d.error) {
+      const retry = await openPwModal('Unlock Exec Key', d.error + ' Try again.');
+      if (retry) generateExecKeyWithPw(retry);
+    }
   } catch(e) {}
 }
 function copyExecKey() {
@@ -1979,6 +2333,403 @@ function copyExecKey() {
   setTimeout(() => btn.classList.remove('copied'), 1500);
 }
 checkExecKey();
+
+// ── Virtual Terminal (persistent shell + polling) ──
+const termHistory = [];
+let termHistoryIdx = -1;
+let termCwd = '~';
+let termUser = 'mule';
+let termHost = 'app';
+let termBusy = false;
+let termPollTimer = null;
+let termLineBuf = '';
+let termSessionInited = false;
+let termKillRing = '';
+const TERM_DONE_MARKER = /^<<MTERM:(\d+):(.+?):MTERM>>$/;
+const TERM_INIT_MARKER = /^<<MTERM_INIT:(.+?):(.+?):(.+?):MTERM_INIT>>$/;
+
+function termPs1Html() {
+  return `<span class="term-user">${termUser}@${termHost}</span><span class="term-sep">:</span><span class="term-cwd">${termCwd}</span><span class="term-dollar">$ </span>`;
+}
+function updateTermPrompt() {
+  document.getElementById('termTabLabel').textContent = termCwd === '~' ? 'Terminal' : termCwd.split('/').pop() || '/';
+  // Update the active inline prompt if it exists
+  const ps1 = document.querySelector('.term-active-line .term-ps1');
+  if (ps1) ps1.innerHTML = termPs1Html();
+}
+
+function ensureTermInput() {
+  // If there's already an active input line, return its input
+  let existing = document.querySelector('.term-active-line');
+  if (existing) return existing.querySelector('.term-inline-input');
+  // Create a new prompt + input line inside term-body
+  const out = document.getElementById('termOutput');
+  const line = document.createElement('div');
+  line.className = 'term-prompt-line term-active-line';
+  const ps1 = document.createElement('span');
+  ps1.className = 'term-ps1';
+  ps1.innerHTML = termPs1Html();
+  const inp = document.createElement('input');
+  inp.className = 'term-inline-input';
+  inp.type = 'text';
+  inp.autocomplete = 'off';
+  inp.spellcheck = false;
+  inp.addEventListener('keydown', termKeyDown);
+  line.appendChild(ps1);
+  line.appendChild(inp);
+  out.appendChild(line);
+  out.scrollTop = out.scrollHeight;
+  return inp;
+}
+
+function focusTermInput() {
+  const inp = ensureTermInput();
+  if (inp) inp.focus();
+}
+
+function freezeActiveInput() {
+  // Convert active input line to static text
+  const line = document.querySelector('.term-active-line');
+  if (!line) return;
+  const inp = line.querySelector('.term-inline-input');
+  const cmd = inp ? inp.value : '';
+  const cmdSpan = document.createElement('span');
+  cmdSpan.className = 'term-cmd-text';
+  cmdSpan.textContent = cmd;
+  if (inp) inp.remove();
+  line.appendChild(cmdSpan);
+  line.classList.remove('term-active-line');
+  return cmd;
+}
+
+function toggleTerminal() {
+  const panel = document.getElementById('termPanel');
+  const btn = document.getElementById('navConsole');
+  const opening = !panel.classList.contains('open');
+  panel.classList.toggle('open');
+  btn.classList.toggle('active');
+  if (opening) {
+    if (currentExecKey) {
+      if (!termSessionInited) initTermSession();
+      startTermPoll();
+    } else if (!document.getElementById('termOutput').hasChildNodes()) {
+      termAppendSys('Exec key not set. Use the Exec Key button in the top bar to unlock.');
+    }
+    const inp = ensureTermInput();
+    if (inp) inp.focus();
+  } else {
+    stopTermPoll();
+    panel.classList.remove('maximized');
+  }
+}
+function termMaximize() {
+  document.getElementById('termPanel').classList.toggle('maximized');
+  document.getElementById('termInput').focus();
+}
+
+function startTermPoll() {
+  if (termPollTimer) return;
+  termPollTimer = setInterval(pollTermOutput, 150);
+}
+function stopTermPoll() {
+  if (termPollTimer) { clearInterval(termPollTimer); termPollTimer = null; }
+}
+
+async function initTermSession() {
+  if (termSessionInited || !currentExecKey) return;
+  termSessionInited = true;
+  try {
+    await fetch(`${API}/api/term/input`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cmd: 'echo "<<MTERM_INIT:$(whoami 2>/dev/null||id -un 2>/dev/null||echo mule):$(hostname 2>/dev/null||cat /etc/hostname 2>/dev/null||echo app):$(pwd):MTERM_INIT>>"',
+        key: currentExecKey
+      })
+    });
+    startTermPoll();
+  } catch(e) {}
+}
+
+async function pollTermOutput() {
+  if (!currentExecKey) return;
+  try {
+    const res = await fetch(`${API}/api/term/read`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: currentExecKey })
+    });
+    const data = await res.json();
+    if (data.error) return;
+    if (data.output) processTermOutput(data.output);
+  } catch(e) {}
+}
+
+function processTermOutput(raw) {
+  termLineBuf += raw;
+  const parts = termLineBuf.split('\n');
+  termLineBuf = parts.pop(); // keep incomplete last line
+  const out = document.getElementById('termOutput');
+  for (const line of parts) {
+    // Check for init marker
+    const im = line.match(TERM_INIT_MARKER);
+    if (im) {
+      termUser = im[1]; termHost = im[2]; termCwd = im[3];
+      updateTermPrompt();
+      continue;
+    }
+    // Check for done marker
+    const dm = line.match(TERM_DONE_MARKER);
+    if (dm) {
+      const exitCode = parseInt(dm[1]);
+      termCwd = dm[2];
+      updateTermPrompt();
+      if (exitCode !== 0) termAppend(`exit ${exitCode}`, 'err');
+      termSetBusy(false);
+      continue;
+    }
+    // Regular output
+    const div = document.createElement('div');
+    div.className = 'term-line out';
+    div.textContent = line;
+    out.appendChild(div);
+  }
+  out.scrollTop = out.scrollHeight;
+}
+
+function updateTermStatus() { updateTermPrompt(); }
+
+function termAppendPrompt(cmd) {
+  // This is now handled by freezeActiveInput + ensureTermInput
+  // But keep for explicit prompt display (e.g. Ctrl+C)
+  const out = document.getElementById('termOutput');
+  const div = document.createElement('div');
+  div.className = 'term-prompt-line';
+  const ps1 = document.createElement('span');
+  ps1.className = 'term-ps1';
+  ps1.innerHTML = termPs1Html();
+  const cmdSpan = document.createElement('span');
+  cmdSpan.className = 'term-cmd-text';
+  cmdSpan.textContent = cmd;
+  div.appendChild(ps1);
+  div.appendChild(cmdSpan);
+  out.appendChild(div);
+  out.scrollTop = out.scrollHeight;
+}
+
+function termAppend(text, cls) {
+  const out = document.getElementById('termOutput');
+  const lines = text.split('\n');
+  for (const l of lines) {
+    const div = document.createElement('div');
+    div.className = 'term-line ' + (cls || 'out');
+    div.textContent = l;
+    out.appendChild(div);
+  }
+  out.scrollTop = out.scrollHeight;
+}
+function termAppendSys(text) { termAppend(text, 'sys'); }
+
+function termSetBusy(busy) {
+  termBusy = busy;
+  const panel = document.getElementById('termPanel');
+  if (busy) panel.classList.add('term-busy');
+  else {
+    panel.classList.remove('term-busy');
+    // Create new input line when command finishes
+    const inp = ensureTermInput();
+    if (inp) inp.focus();
+  }
+}
+
+async function termExec(cmd) {
+  // Freeze the current input line (converts to static text)
+  freezeActiveInput();
+
+  if (!cmd.trim()) { ensureTermInput(); return; }
+  termHistory.unshift(cmd);
+  termHistoryIdx = -1;
+
+  if (cmd.trim() === 'clear') {
+    document.getElementById('termOutput').innerHTML = '';
+    ensureTermInput().focus();
+    return;
+  }
+  if (!currentExecKey) {
+    termAppend('exec key not set — use Exec Key button to unlock', 'err');
+    ensureTermInput().focus();
+    return;
+  }
+
+  termSetBusy(true);
+  // Send command + done marker (captures exit code and cwd)
+  const wrapped = cmd + '\n__mtr=$?; echo "<<MTERM:${__mtr}:$(pwd):MTERM>>"';
+  try {
+    const res = await fetch(`${API}/api/term/input`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cmd: wrapped, key: currentExecKey })
+    });
+    const data = await res.json();
+    if (data.error) {
+      termAppend(data.error, 'err');
+      termSetBusy(false);
+      ensureTermInput().focus();
+    }
+  } catch (e) {
+    termAppend('Connection failed: ' + e.message, 'err');
+    termSetBusy(false);
+    ensureTermInput().focus();
+  }
+}
+
+function termKeyDown(e) {
+  const input = e.target;
+  if (termBusy && e.key === 'Enter') { e.preventDefault(); return; }
+
+  // ── Ctrl keybindings ──
+  if (e.ctrlKey && !e.altKey && !e.metaKey) {
+    const key = e.key.toLowerCase();
+    switch (key) {
+      case 'a': e.preventDefault(); input.setSelectionRange(0, 0); return;
+      case 'e': e.preventDefault(); input.setSelectionRange(input.value.length, input.value.length); return;
+      case 'u': e.preventDefault(); termKillRing = input.value.substring(0, input.selectionStart); input.value = input.value.substring(input.selectionStart); input.setSelectionRange(0, 0); return;
+      case 'k': e.preventDefault(); termKillRing = input.value.substring(input.selectionStart); input.value = input.value.substring(0, input.selectionStart); return;
+      case 'w': e.preventDefault(); { const pos = input.selectionStart; const before = input.value.substring(0, pos); const m = before.match(/\s*\S+\s*$/); const cut = m ? m[0].length : 0; termKillRing = before.substring(pos - cut); input.value = before.substring(0, pos - cut) + input.value.substring(pos); input.setSelectionRange(pos - cut, pos - cut); } return;
+      case 'y': e.preventDefault(); if (termKillRing) { const pos = input.selectionStart; input.value = input.value.substring(0, pos) + termKillRing + input.value.substring(pos); input.setSelectionRange(pos + termKillRing.length, pos + termKillRing.length); } return;
+      case 'b': e.preventDefault(); if (input.selectionStart > 0) input.setSelectionRange(input.selectionStart - 1, input.selectionStart - 1); return;
+      case 'f': e.preventDefault(); if (input.selectionStart < input.value.length) input.setSelectionRange(input.selectionStart + 1, input.selectionStart + 1); return;
+      case 'd': e.preventDefault(); if (input.value.length === 0) { toggleTerminal(); return; } { const pos = input.selectionStart; input.value = input.value.substring(0, pos) + input.value.substring(pos + 1); input.setSelectionRange(pos, pos); } return;
+      case 'h': return;
+      case 'l': e.preventDefault(); document.getElementById('termOutput').innerHTML = ''; ensureTermInput().focus(); return;
+      case 'c': e.preventDefault(); input.value += '^C'; freezeActiveInput(); termHistoryIdx = -1; ensureTermInput().focus(); return;
+      case 'p': e.preventDefault(); if (termHistoryIdx < termHistory.length - 1) { termHistoryIdx++; input.value = termHistory[termHistoryIdx]; } return;
+      case 'n': e.preventDefault(); if (termHistoryIdx > 0) { termHistoryIdx--; input.value = termHistory[termHistoryIdx]; } else { termHistoryIdx = -1; input.value = ''; } return;
+    }
+  }
+  // ── Alt keybindings ──
+  if (e.altKey && !e.ctrlKey && !e.metaKey) {
+    const key = e.key.toLowerCase();
+    switch (key) {
+      case 'b': e.preventDefault(); { const pos = input.selectionStart; const before = input.value.substring(0, pos); const m = before.match(/\S+\s*$/); const target = m ? pos - m[0].length : 0; input.setSelectionRange(target, target); } return;
+      case 'f': e.preventDefault(); { const pos = input.selectionStart; const after = input.value.substring(pos); const m = after.match(/^\s*\S+/); const target = m ? pos + m[0].length : input.value.length; input.setSelectionRange(target, target); } return;
+      case 'd': e.preventDefault(); { const pos = input.selectionStart; const after = input.value.substring(pos); const m = after.match(/^\s*\S+/); const cut = m ? m[0].length : 0; termKillRing = after.substring(0, cut); input.value = input.value.substring(0, pos) + after.substring(cut); input.setSelectionRange(pos, pos); } return;
+      case 'backspace': e.preventDefault(); { const pos = input.selectionStart; const before = input.value.substring(0, pos); const m = before.match(/\s*\S+\s*$/); const cut = m ? m[0].length : 0; termKillRing = before.substring(pos - cut); input.value = before.substring(0, pos - cut) + input.value.substring(pos); input.setSelectionRange(pos - cut, pos - cut); } return;
+    }
+  }
+  // ── Regular keys ──
+  if (e.key === 'Enter') { const cmd = input.value; input.value = ''; termExec(cmd); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); if (termHistoryIdx < termHistory.length - 1) { termHistoryIdx++; input.value = termHistory[termHistoryIdx]; } }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); if (termHistoryIdx > 0) { termHistoryIdx--; input.value = termHistory[termHistoryIdx]; } else { termHistoryIdx = -1; input.value = ''; } }
+  else if (e.key === 'Tab') { e.preventDefault(); termComplete(input); }
+}
+
+// ── Tab Completion ──
+let termCompleteCache = null; // {word, candidates, index} for cycling
+
+async function termComplete(input) {
+  if (!currentExecKey) return;
+  const val = input.value;
+  const pos = input.selectionStart;
+  const before = val.substring(0, pos);
+
+  // Extract the word being completed
+  const wordMatch = before.match(/(\S+)$/);
+  const word = wordMatch ? wordMatch[1] : '';
+  const wordStart = wordMatch ? pos - wordMatch[1].length : pos;
+  const isFirstWord = !before.substring(0, wordStart).trim();
+
+  // Check if we're cycling through cached candidates (double-tab)
+  if (termCompleteCache && termCompleteCache.word === word && termCompleteCache.candidates.length > 1) {
+    termCompleteCache.index = (termCompleteCache.index + 1) % termCompleteCache.candidates.length;
+    const pick = termCompleteCache.candidates[termCompleteCache.index];
+    input.value = val.substring(0, wordStart) + pick + val.substring(pos);
+    input.setSelectionRange(wordStart + pick.length, wordStart + pick.length);
+    return;
+  }
+
+  // Build compgen command: -c for commands (first word), -f for files, -d for dirs
+  const cdPrefix = (termCwd && termCwd !== '~') ? `cd ${termCwd} 2>/dev/null; ` : '';
+  let compCmd;
+  if (isFirstWord) {
+    compCmd = `${cdPrefix}compgen -c -- '${word.replace(/'/g, "'\\''")}' 2>/dev/null | head -50`;
+  } else {
+    compCmd = `${cdPrefix}compgen -f -- '${word.replace(/'/g, "'\\''")}' 2>/dev/null | head -50`;
+  }
+
+  try {
+    const res = await fetch(`${API}/api/exec`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: compCmd, key: currentExecKey })
+    });
+    const data = await res.json();
+    if (data.error || !data.output || !data.output.trim()) return;
+
+    const candidates = data.output.trim().split('\n').filter(c => c);
+    if (candidates.length === 0) return;
+
+    if (candidates.length === 1) {
+      // Single match: complete it
+      let completion = candidates[0];
+      // Add trailing slash for directories, space for commands
+      if (isFirstWord) completion += ' ';
+      input.value = val.substring(0, wordStart) + completion + val.substring(pos);
+      input.setSelectionRange(wordStart + completion.length, wordStart + completion.length);
+      termCompleteCache = null;
+    } else {
+      // Multiple matches: find common prefix
+      let common = candidates[0];
+      for (let i = 1; i < candidates.length; i++) {
+        while (!candidates[i].startsWith(common)) {
+          common = common.substring(0, common.length - 1);
+        }
+      }
+      if (common.length > word.length) {
+        // Extend to common prefix
+        input.value = val.substring(0, wordStart) + common + val.substring(pos);
+        input.setSelectionRange(wordStart + common.length, wordStart + common.length);
+        termCompleteCache = { word: common, candidates, index: -1 };
+      } else {
+        // Show candidates in terminal output
+        const out = document.getElementById('termOutput');
+        const line = document.createElement('div');
+        line.className = 'term-line sys';
+        line.textContent = candidates.join('  ');
+        // Insert before the active input line
+        const activeLine = document.querySelector('.term-active-line');
+        if (activeLine) out.insertBefore(line, activeLine);
+        else out.appendChild(line);
+        out.scrollTop = out.scrollHeight;
+        termCompleteCache = { word, candidates, index: -1 };
+      }
+    }
+  } catch(e) {}
+}
+
+// Reset completion cache on any non-Tab input
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Tab' && e.target.classList.contains('term-inline-input')) {
+    termCompleteCache = null;
+  }
+});
+
+// Drag to resize terminal
+(function() {
+  const handle = document.getElementById('termResizeHandle');
+  const panel = document.getElementById('termPanel');
+  let startY, startH;
+  handle.addEventListener('mousedown', e => {
+    e.preventDefault();
+    panel.classList.remove('maximized');
+    startY = e.clientY;
+    startH = panel.offsetHeight;
+    const onMove = ev => { panel.style.height = Math.max(150, startH + (startY - ev.clientY)) + 'px'; };
+    const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+})();
 </script>
 </body>
 </html>

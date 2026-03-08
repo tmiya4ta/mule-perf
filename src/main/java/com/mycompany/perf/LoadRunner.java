@@ -4,6 +4,7 @@ import zeph.client.HttpClientNio;
 import zeph.client.HttpClientRequest;
 import zeph.client.HttpClientResponse;
 
+import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
@@ -21,10 +22,78 @@ public class LoadRunner {
     private static final ConcurrentHashMap<String, TestState> tests = new ConcurrentHashMap<>();
     private static volatile HttpClientNio sharedClient;
     private static volatile String execKey = null;
+    private static volatile String execPassword = null;
+
+    // ── Persistent terminal session ──
+    private static Process termProcess;
+    private static OutputStream termStdin;
+    private static final StringBuilder termBuffer = new StringBuilder();
+    private static volatile boolean termAlive = false;
+
+    private static synchronized void ensureTermProcess() throws Exception {
+        if (termProcess != null && termProcess.isAlive()) return;
+        ProcessBuilder pb = new ProcessBuilder("sh");
+        pb.redirectErrorStream(true);
+        termProcess = pb.start();
+        termStdin = termProcess.getOutputStream();
+        termAlive = true;
+        InputStream is = termProcess.getInputStream();
+        Thread reader = new Thread(() -> {
+            byte[] buf = new byte[8192];
+            try {
+                int n;
+                while ((n = is.read(buf)) != -1) {
+                    synchronized (termBuffer) {
+                        termBuffer.append(new String(buf, 0, n));
+                    }
+                }
+            } catch (Exception ignored) {}
+            termAlive = false;
+        });
+        reader.setDaemon(true);
+        reader.start();
+    }
+
+    public static Map<String, Object> termWrite(String input, String key) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (execKey == null) { result.put("error", "No exec key set."); return result; }
+        if (!execKey.equals(key)) { result.put("error", "Invalid exec key."); return result; }
+        try {
+            ensureTermProcess();
+            termStdin.write((input + "\n").getBytes());
+            termStdin.flush();
+            result.put("ok", true);
+        } catch (Exception e) {
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public static Map<String, Object> termRead(String key) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (execKey == null) { result.put("error", "No exec key set."); return result; }
+        if (!execKey.equals(key)) { result.put("error", "Invalid exec key."); return result; }
+        String output;
+        synchronized (termBuffer) {
+            output = termBuffer.toString();
+            termBuffer.setLength(0);
+        }
+        result.put("output", output);
+        result.put("alive", termAlive);
+        return result;
+    }
 
     private static HttpClientNio getClient() throws Exception {
-        if (sharedClient == null) {
+        return getClient(false);
+    }
+
+    private static HttpClientNio getClient(boolean forceNew) throws Exception {
+        if (forceNew || sharedClient == null) {
             synchronized (LoadRunner.class) {
+                if (forceNew && sharedClient != null) {
+                    try { sharedClient.close(); } catch (Exception ignored) {}
+                    sharedClient = null;
+                }
                 if (sharedClient == null) {
                     sharedClient = new HttpClientNio();
                 }
@@ -55,6 +124,16 @@ public class LoadRunner {
         final AtomicLong warmupTotal = new AtomicLong();
         final AtomicLong warmupErrors = new AtomicLong();
         final AtomicLong warmupTotalRt = new AtomicLong();
+
+        // Step load parameters (null = normal mode)
+        volatile boolean stepMode = false;
+        int stepStart;    // initial connections
+        int stepInc;      // connections added per step
+        int stepMax;      // max connections
+        int stepDurSec;   // duration per step
+        int errorThreshold; // stop after N errors (0 = disabled)
+        final AtomicInteger currentStep = new AtomicInteger(0);
+        final AtomicInteger activeConcurrency = new AtomicInteger(0);
 
         // In-flight request counter
         final AtomicLong inFlight = new AtomicLong();
@@ -104,8 +183,12 @@ public class LoadRunner {
         void record(int statusCode, long elapsedMs, boolean error, String errorType) {
             total.incrementAndGet();
             totalRt.addAndGet(elapsedMs);
-            if (error) errors.incrementAndGet();
-            else success.incrementAndGet();
+            if (error) {
+                long errCount = errors.incrementAndGet();
+                if (errorThreshold > 0 && errCount >= errorThreshold && running.compareAndSet(true, false)) {
+                    markFinished("error_threshold");
+                }
+            } else success.incrementAndGet();
 
             // Update min/max atomically
             long curMin;
@@ -120,9 +203,16 @@ public class LoadRunner {
             else if (statusCode < 500) s4xx.incrementAndGet();
             else s5xx.incrementAndGet();
 
-            // Detailed tracking (errors only: connection errors + 4xx/5xx)
-            if (error || statusCode == 0) {
-                String detailKey = statusCode == 0 ? (errorType != null ? errorType : "unknown") : String.valueOf(statusCode);
+            // Detailed tracking: all errors (connection errors + 4xx/5xx)
+            if (error) {
+                String detailKey;
+                if (statusCode == 0) {
+                    detailKey = errorType != null ? errorType : "unknown";
+                } else if (errorType != null) {
+                    detailKey = errorType;
+                } else {
+                    detailKey = "HTTP " + statusCode;
+                }
                 statusDetail.computeIfAbsent(detailKey, k -> new AtomicLong()).incrementAndGet();
             }
 
@@ -162,16 +252,38 @@ public class LoadRunner {
 
         HttpClientNio client;
         try {
-            client = getClient();
+            client = getClient(true);
         } catch (Exception e) {
             state.running.set(false);
             state.markFinished("error");
             return testId;
         }
 
-        // Launch N async request chains (no threads created per chain)
-        for (int i = 0; i < concurrency; i++) {
-            fireNextRequest(state, client, endTime);
+        final long fEndTime = endTime;
+        final HttpClientNio fClient = client;
+
+        if (warmupSec > 0) {
+            // Warmup: single connection only
+            fireNextRequest(state, fClient, fEndTime);
+
+            // Schedule remaining connections after warmup completes
+            Thread warmupWatcher = new Thread(() -> {
+                long waitMs = state.warmupEndTime - System.currentTimeMillis();
+                if (waitMs > 0) {
+                    try { Thread.sleep(waitMs); } catch (InterruptedException ignored) {}
+                }
+                // Launch remaining N-1 chains
+                for (int i = 1; i < concurrency; i++) {
+                    fireNextRequest(state, fClient, fEndTime);
+                }
+            }, "perf-warmup-" + testId.substring(0, 8));
+            warmupWatcher.setDaemon(true);
+            warmupWatcher.start();
+        } else {
+            // No warmup: launch all N chains immediately
+            for (int i = 0; i < concurrency; i++) {
+                fireNextRequest(state, fClient, fEndTime);
+            }
         }
 
         // Single lightweight monitor thread to detect completion
@@ -188,6 +300,96 @@ public class LoadRunner {
         monitor.start();
 
         return testId;
+    }
+
+    public static String startStepLoad(String testId, String url, String method,
+            int startConn, int stepInc, int maxConn, int stepDurSec, int warmupSec,
+            int errorThreshold, int maxDurationSec) {
+        if (testId == null || testId.isEmpty()) testId = UUID.randomUUID().toString();
+        int totalSteps = Math.max(1, (maxConn - startConn) / Math.max(1, stepInc) + 1);
+        int stepTotal = totalSteps * stepDurSec;
+        int totalDuration = maxDurationSec > 0 ? Math.min(stepTotal, maxDurationSec) : stepTotal;
+        TestState state = new TestState(testId, url, method.toUpperCase(), maxConn, totalDuration, warmupSec);
+        state.stepMode = true;
+        state.stepStart = startConn;
+        state.stepInc = stepInc;
+        state.stepMax = maxConn;
+        state.stepDurSec = stepDurSec;
+        state.errorThreshold = errorThreshold;
+        state.activeConcurrency.set(startConn);
+        state.currentStep.set(1);
+        tests.put(testId, state);
+
+        long endTime = state.startTime + (long) warmupSec * 1000 + (long) totalDuration * 1000;
+
+        HttpClientNio client;
+        try {
+            client = getClient(true);
+        } catch (Exception e) {
+            state.running.set(false);
+            state.markFinished("error");
+            return testId;
+        }
+
+        final long fEndTime = endTime;
+        final HttpClientNio fClient = client;
+
+        // Start with warmup (1 conn) or initial connections
+        if (warmupSec > 0) {
+            fireNextRequest(state, fClient, fEndTime);
+            Thread warmupWatcher = new Thread(() -> {
+                long waitMs = state.warmupEndTime - System.currentTimeMillis();
+                if (waitMs > 0) {
+                    try { Thread.sleep(waitMs); } catch (InterruptedException ignored) {}
+                }
+                // After warmup: launch startConn - 1 more chains
+                for (int i = 1; i < startConn; i++) {
+                    fireNextRequest(state, fClient, fEndTime);
+                }
+                // Start step escalation
+                scheduleSteps(state, fClient, fEndTime, startConn);
+            }, "perf-warmup-" + testId.substring(0, 8));
+            warmupWatcher.setDaemon(true);
+            warmupWatcher.start();
+        } else {
+            for (int i = 0; i < startConn; i++) {
+                fireNextRequest(state, fClient, fEndTime);
+            }
+            scheduleSteps(state, fClient, fEndTime, startConn);
+        }
+
+        // Monitor thread
+        Thread monitor = new Thread(() -> {
+            try { state.chainLatch.await(); } catch (InterruptedException ignored) {}
+            if (state.running.get()) {
+                state.running.set(false);
+                state.markFinished("completed");
+            }
+        }, "perf-mon-" + testId.substring(0, 8));
+        monitor.setDaemon(true);
+        monitor.start();
+
+        return testId;
+    }
+
+    private static void scheduleSteps(TestState state, HttpClientNio client, long endTime, int currentConn) {
+        Thread stepper = new Thread(() -> {
+            int conn = currentConn;
+            while (state.running.get() && conn < state.stepMax) {
+                try { Thread.sleep((long) state.stepDurSec * 1000); } catch (InterruptedException ignored) { break; }
+                if (!state.running.get()) break;
+                int nextConn = Math.min(conn + state.stepInc, state.stepMax);
+                int toAdd = nextConn - conn;
+                state.currentStep.incrementAndGet();
+                state.activeConcurrency.set(nextConn);
+                for (int i = 0; i < toAdd; i++) {
+                    fireNextRequest(state, client, endTime);
+                }
+                conn = nextConn;
+            }
+        }, "perf-step-" + state.id.substring(0, 8));
+        stepper.setDaemon(true);
+        stepper.start();
     }
 
     public static Map<String, Object> status(String testId) {
@@ -225,7 +427,7 @@ public class LoadRunner {
             m.put("status", s.status);
             m.put("targetUrl", s.url);
             m.put("method", s.method);
-            m.put("concurrency", s.concurrency);
+            m.put("concurrency", s.stepMode ? s.activeConcurrency.get() : s.concurrency);
             m.put("totalRequests", s.total.get());
             result.add(m);
         }
@@ -280,14 +482,29 @@ public class LoadRunner {
         return result;
     }
 
-    public static String generateExecKey() {
-        if (execKey != null) return null; // already set, cannot regenerate
-        execKey = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
-        return execKey;
+    public static Map<String, Object> generateExecKey(String password) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (password == null || password.isEmpty()) {
+            result.put("error", "Password is required.");
+            return result;
+        }
+        if (execPassword == null) {
+            // First time: set password and generate key
+            execPassword = password;
+            execKey = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+            result.put("key", execKey);
+        } else if (execPassword.equals(password)) {
+            // Correct password: regenerate key
+            execKey = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+            result.put("key", execKey);
+        } else {
+            result.put("error", "Invalid password.");
+        }
+        return result;
     }
 
     public static boolean isExecKeySet() {
-        return execKey != null;
+        return execPassword != null;
     }
 
     public static Map<String, Object> exec(String command, String key) {
@@ -363,7 +580,7 @@ public class LoadRunner {
                         state.warmupTotalRt.addAndGet(elapsed);
                         if (isError) state.warmupErrors.incrementAndGet();
                     } else {
-                        state.record(sc < 0 ? 0 : sc, elapsed, isError, sc < 0 ? "error_response" : null);
+                        state.record(sc < 0 ? 0 : sc, elapsed, isError, null);
                     }
                 }
 
@@ -429,8 +646,14 @@ public class LoadRunner {
                        s.hist200_500.get(), s.hist500_1s.get(), s.hist1s.get()};
         long[] bucketMid = {25, 75, 150, 350, 750, 1500};
 
-        // Time series
+        // Time series (keep last 600 entries = 10 min, prune old)
         TreeMap<Long, long[]> sorted = new TreeMap<>(s.timeSeries);
+        final int TS_MAX = 600;
+        if (sorted.size() > TS_MAX) {
+            long cutoff = sorted.descendingKeySet().stream().skip(TS_MAX).findFirst().orElse(Long.MIN_VALUE);
+            sorted.headMap(cutoff, true).keySet().forEach(s.timeSeries::remove);
+            sorted = new TreeMap<>(sorted.tailMap(cutoff, false));
+        }
         List<Map<String, Object>> timeSeries = new ArrayList<>();
         for (Map.Entry<Long, long[]> e : sorted.entrySet()) {
             long[] ts;
@@ -451,8 +674,22 @@ public class LoadRunner {
         result.put("status", s.status);
         result.put("targetUrl", s.url);
         result.put("method", s.method);
-        result.put("concurrency", s.concurrency);
+        result.put("concurrency", s.stepMode ? s.activeConcurrency.get() : s.concurrency);
         result.put("warmupSec", s.warmupSec);
+        if (s.stepMode) {
+            Map<String, Object> step = new LinkedHashMap<>();
+            step.put("enabled", true);
+            step.put("currentStep", s.currentStep.get());
+            step.put("activeConcurrency", s.activeConcurrency.get());
+            step.put("startConn", s.stepStart);
+            step.put("stepInc", s.stepInc);
+            step.put("maxConn", s.stepMax);
+            step.put("stepDurationSec", s.stepDurSec);
+            int totalSteps = Math.max(1, (s.stepMax - s.stepStart) / Math.max(1, s.stepInc) + 1);
+            step.put("totalSteps", totalSteps);
+            if (s.errorThreshold > 0) step.put("errorThreshold", s.errorThreshold);
+            result.put("stepLoad", step);
+        }
         // Warmup stats
         Map<String, Object> warmup = new LinkedHashMap<>();
         long wTotal = s.warmupTotal.get();

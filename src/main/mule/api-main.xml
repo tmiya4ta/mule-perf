@@ -88,16 +88,14 @@ java!com::mycompany::perf::LoadRunner::systemMetrics()]]></ee:set-payload>
                 </ee:transform>
             </when>
 
-            <!-- POST /api/exec-key - Generate exec key (one-shot, cannot regenerate) -->
+            <!-- POST /api/exec-key - Generate exec key (password required) -->
             <when expression="#[vars.method == 'POST' and vars.path == '/api/exec-key']">
                 <ee:transform doc:name="Generate Key">
                     <ee:message>
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
-var key = java!com::mycompany::perf::LoadRunner::generateExecKey()
 ---
-if (key != null) {key: key}
-else {error: "Exec key already set. Redeploy to reset."}]]></ee:set-payload>
+java!com::mycompany::perf::LoadRunner::generateExecKey(payload.password)]]></ee:set-payload>
                     </ee:message>
                 </ee:transform>
             </when>
@@ -122,6 +120,30 @@ output application/json
 output application/json
 ---
 java!com::mycompany::perf::LoadRunner::exec(payload.command, payload.key)]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- POST /api/term/input - Write to persistent shell stdin -->
+            <when expression="#[vars.method == 'POST' and vars.path == '/api/term/input']">
+                <ee:transform doc:name="Term Write">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+java!com::mycompany::perf::LoadRunner::termWrite(payload.cmd, payload.key)]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- POST /api/term/read - Read persistent shell output buffer -->
+            <when expression="#[vars.method == 'POST' and vars.path == '/api/term/read']">
+                <ee:transform doc:name="Term Read">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+java!com::mycompany::perf::LoadRunner::termRead(payload.key)]]></ee:set-payload>
                     </ee:message>
                 </ee:transform>
             </when>

@@ -20,9 +20,22 @@ var method = upper(body.method default "GET")
 var concurrency = body.concurrency default 5
 var duration = body.duration default 30
 var warmup = body.warmup default 0
-var javaId = java!com::mycompany::perf::LoadRunner::start(
-    testId, url, method, concurrency, duration, warmup
-)
+var sl = body.stepLoad
+var javaId = if (sl != null and sl.enabled == true)
+    java!com::mycompany::perf::LoadRunner::startStepLoad(
+        testId, url, method,
+        sl.startConn default 1,
+        sl.stepInc default 5,
+        sl.maxConn default concurrency,
+        sl.stepDurationSec default 30,
+        warmup,
+        sl.errorThreshold default 0,
+        sl.maxDurationSec default 0
+    )
+  else
+    java!com::mycompany::perf::LoadRunner::start(
+        testId, url, method, concurrency, duration, warmup
+    )
 ---
 {
     id: javaId,
@@ -32,6 +45,7 @@ var javaId = java!com::mycompany::perf::LoadRunner::start(
     concurrency: concurrency,
     duration: duration,
     warmup: warmup,
+    (stepLoad: sl) if sl != null,
     message: "Load test started"
 }]]></ee:set-payload>
             </ee:message>
