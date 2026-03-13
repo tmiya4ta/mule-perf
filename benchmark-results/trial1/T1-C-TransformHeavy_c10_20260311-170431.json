@@ -1,0 +1,517 @@
+{
+  "scenario": "T1-C-TransformHeavy",
+  "concurrency": 10,
+  "duration": 60,
+  "warmup": 10,
+  "result": {
+  "testId": "6b8d4586-4dec-4807-bb7f-89c2b894a689",
+  "status": "completed",
+  "targetUrl": "http://bench-target.0d0debc2-8327-4e41-b5fb-7911421cc2c5.svc.cluster.local:8081/api/transform/heavy",
+  "method": "POST",
+  "concurrency": 10,
+  "warmupSec": 10,
+  "warmup": {
+    "totalRequests": 2447,
+    "errors": 0,
+    "avgRt": 4.077646097261954,
+    "elapsedSec": 10,
+    "remainingSec": 0
+  },
+  "totalRequests": 8939,
+  "successCount": 8939,
+  "errorCount": 0,
+  "responseTime": {
+    "avg": 67.14140284148115,
+    "min": 2,
+    "max": 631,
+    "p50": 75,
+    "p95": 150,
+    "p99": 350
+  },
+  "throughput": {
+    "rps": 148.81715417783474,
+    "totalElapsedSeconds": 60.067
+  },
+  "errorRate": 0,
+  "statusCodes": {
+    "2xx": 8939
+  },
+  "errorDetail": {
+    
+  },
+  "inFlight": 0,
+  "connections": {
+    "active": 0,
+    "tcp": 0,
+    "pending": 0
+  },
+  "timeSeries": [
+    {
+      "timestamp": 1773217555000,
+      "rps": 376,
+      "avgRt": 25.81117021276596,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217556000,
+      "rps": 376,
+      "avgRt": 26.45212765957447,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217557000,
+      "rps": 173,
+      "avgRt": 55.20809248554913,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217558000,
+      "rps": 92,
+      "avgRt": 102.8804347826087,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217559000,
+      "rps": 134,
+      "avgRt": 80.42537313432835,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217560000,
+      "rps": 128,
+      "avgRt": 75.7421875,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217561000,
+      "rps": 101,
+      "avgRt": 102.06930693069307,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217562000,
+      "rps": 178,
+      "avgRt": 56.71910112359551,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217563000,
+      "rps": 145,
+      "avgRt": 62.44137931034483,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217564000,
+      "rps": 153,
+      "avgRt": 70.27450980392157,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217565000,
+      "rps": 185,
+      "avgRt": 55.167567567567566,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217566000,
+      "rps": 177,
+      "avgRt": 56.271186440677965,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217567000,
+      "rps": 149,
+      "avgRt": 66.20805369127517,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217568000,
+      "rps": 127,
+      "avgRt": 77.92125984251969,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217569000,
+      "rps": 120,
+      "avgRt": 82.61666666666666,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217570000,
+      "rps": 167,
+      "avgRt": 63.616766467065865,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217571000,
+      "rps": 142,
+      "avgRt": 67.73239436619718,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217572000,
+      "rps": 158,
+      "avgRt": 61.664556962025316,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217573000,
+      "rps": 127,
+      "avgRt": 76.54330708661418,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217574000,
+      "rps": 124,
+      "avgRt": 84.0241935483871,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217575000,
+      "rps": 149,
+      "avgRt": 65.31543624161074,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217576000,
+      "rps": 188,
+      "avgRt": 54.1063829787234,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217577000,
+      "rps": 184,
+      "avgRt": 55.94021739130435,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217578000,
+      "rps": 122,
+      "avgRt": 77.30327868852459,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217579000,
+      "rps": 140,
+      "avgRt": 73.23571428571428,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217580000,
+      "rps": 131,
+      "avgRt": 76.50381679389314,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217581000,
+      "rps": 139,
+      "avgRt": 72.27338129496403,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217582000,
+      "rps": 175,
+      "avgRt": 57.325714285714284,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217583000,
+      "rps": 172,
+      "avgRt": 57.19186046511628,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217584000,
+      "rps": 142,
+      "avgRt": 72.78169014084507,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217585000,
+      "rps": 152,
+      "avgRt": 65.58552631578948,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217586000,
+      "rps": 179,
+      "avgRt": 58.18994413407821,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217587000,
+      "rps": 171,
+      "avgRt": 53.50292397660819,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217588000,
+      "rps": 104,
+      "avgRt": 100.27884615384616,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217589000,
+      "rps": 121,
+      "avgRt": 79.02479338842976,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217590000,
+      "rps": 138,
+      "avgRt": 77.53623188405797,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217591000,
+      "rps": 97,
+      "avgRt": 98.26804123711341,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217592000,
+      "rps": 180,
+      "avgRt": 56.01111111111111,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217593000,
+      "rps": 153,
+      "avgRt": 60.21568627450981,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217594000,
+      "rps": 146,
+      "avgRt": 75.28767123287672,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217595000,
+      "rps": 143,
+      "avgRt": 67.2937062937063,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217596000,
+      "rps": 171,
+      "avgRt": 61.52046783625731,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217597000,
+      "rps": 147,
+      "avgRt": 60.523809523809526,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217598000,
+      "rps": 83,
+      "avgRt": 130.78313253012047,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217599000,
+      "rps": 117,
+      "avgRt": 86.17094017094017,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217600000,
+      "rps": 97,
+      "avgRt": 96.5979381443299,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217601000,
+      "rps": 103,
+      "avgRt": 98.7864077669903,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217602000,
+      "rps": 126,
+      "avgRt": 82.9920634920635,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217603000,
+      "rps": 122,
+      "avgRt": 76.27049180327869,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217604000,
+      "rps": 125,
+      "avgRt": 81.36,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217605000,
+      "rps": 134,
+      "avgRt": 76.94776119402985,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217606000,
+      "rps": 171,
+      "avgRt": 58.590643274853804,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217607000,
+      "rps": 172,
+      "avgRt": 58.77325581395349,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217608000,
+      "rps": 103,
+      "avgRt": 93.66990291262135,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217609000,
+      "rps": 81,
+      "avgRt": 127.67901234567901,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217610000,
+      "rps": 167,
+      "avgRt": 61.83832335329341,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217611000,
+      "rps": 97,
+      "avgRt": 90.38144329896907,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217612000,
+      "rps": 162,
+      "avgRt": 68.64814814814815,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217613000,
+      "rps": 158,
+      "avgRt": 59.11392405063291,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217614000,
+      "rps": 133,
+      "avgRt": 77.23308270676692,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773217615000,
+      "rps": 12,
+      "avgRt": 79.5,
+      "errors": 0
+    }
+  ],
+  "histogram": [
+    {
+      "label": "0-50ms",
+      "count": 3318
+    },
+    {
+      "label": "50-100ms",
+      "count": 4165
+    },
+    {
+      "label": "100-200ms",
+      "count": 1167
+    },
+    {
+      "label": "200-500ms",
+      "count": 287
+    },
+    {
+      "label": "500ms-1s",
+      "count": 2
+    },
+    {
+      "label": "1s+",
+      "count": 0
+    }
+  ]
+},
+  "system": {
+    "pre": {"mulePerf": {
+  "heapUsedMB": 102,
+  "heapMaxMB": 2048,
+  "heapPct": 5,
+  "nonHeapMB": 210,
+  "cpuPct": 2,
+  "availableProcessors": 2,
+  "systemCpuPct": 2,
+  "threadCount": 60,
+  "peakThreadCount": 63,
+  "activeTests": 2,
+  "totalTests": 11,
+  "uptimeSeconds": 2484
+}, "benchTarget": {
+  "heapUsedMB": 143,
+  "heapMaxMB": 2048,
+  "heapPct": 7,
+  "processors": 2,
+  "threadCount": 65,
+  "peakThreadCount": 117,
+  "uptimeSeconds": 2237,
+  "cpuPct": 15,
+  "systemCpuPct": 12
+}},
+    "mid": {"mulePerf": {
+  "heapUsedMB": 163,
+  "heapMaxMB": 2048,
+  "heapPct": 8,
+  "nonHeapMB": 211,
+  "cpuPct": 3,
+  "availableProcessors": 2,
+  "systemCpuPct": 3,
+  "threadCount": 61,
+  "peakThreadCount": 63,
+  "activeTests": 3,
+  "totalTests": 12,
+  "uptimeSeconds": 2524
+}, "benchTarget": {
+  "heapUsedMB": 140,
+  "heapMaxMB": 2048,
+  "heapPct": 7,
+  "processors": 2,
+  "threadCount": 69,
+  "peakThreadCount": 117,
+  "uptimeSeconds": 2278,
+  "cpuPct": 42,
+  "systemCpuPct": 52
+}},
+    "post": {"mulePerf": {
+  "heapUsedMB": 149,
+  "heapMaxMB": 2048,
+  "heapPct": 7,
+  "nonHeapMB": 211,
+  "cpuPct": 1,
+  "availableProcessors": 2,
+  "systemCpuPct": 2,
+  "threadCount": 60,
+  "peakThreadCount": 63,
+  "activeTests": 2,
+  "totalTests": 12,
+  "uptimeSeconds": 2560
+}, "benchTarget": {
+  "heapUsedMB": 135,
+  "heapMaxMB": 2048,
+  "heapPct": 7,
+  "processors": 2,
+  "threadCount": 69,
+  "peakThreadCount": 117,
+  "uptimeSeconds": 2313,
+  "cpuPct": 26,
+  "systemCpuPct": 28
+}}
+  }
+}

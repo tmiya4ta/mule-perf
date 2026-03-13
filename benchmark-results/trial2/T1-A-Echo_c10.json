@@ -1,0 +1,1291 @@
+{
+  "scenario": "T1-A-Echo",
+  "concurrency": 10,
+  "duration": 180,
+  "warmup": 15,
+  "result": {
+  "testId": "314ed376-c167-4fac-a440-49a7aec01050",
+  "status": "completed",
+  "targetUrl": "http://bench-target.0d0debc2-8327-4e41-b5fb-7911421cc2c5.svc.cluster.local:8081/api/echo",
+  "method": "GET",
+  "concurrency": 10,
+  "warmupSec": 15,
+  "warmup": {
+    "totalRequests": 7224,
+    "errors": 0,
+    "avgRt": 2.0676910299003324,
+    "elapsedSec": 15,
+    "remainingSec": 0
+  },
+  "totalRequests": 339683,
+  "successCount": 339683,
+  "errorCount": 0,
+  "responseTime": {
+    "avg": 5.294989740434464,
+    "min": 1,
+    "max": 92,
+    "p50": 25,
+    "p95": 25,
+    "p99": 25
+  },
+  "throughput": {
+    "rps": 1886.8761942852063,
+    "totalElapsedSeconds": 180.024
+  },
+  "errorRate": 0,
+  "statusCodes": {
+    "2xx": 339683
+  },
+  "errorDetail": {
+    
+  },
+  "inFlight": 0,
+  "connections": {
+    "active": 0,
+    "tcp": 0,
+    "pending": 0
+  },
+  "timeSeries": [
+    {
+      "timestamp": 1773219286000,
+      "rps": 21,
+      "avgRt": 8.857142857142858,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219287000,
+      "rps": 1880,
+      "avgRt": 5.318617021276595,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219288000,
+      "rps": 1733,
+      "avgRt": 5.757068667051356,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219289000,
+      "rps": 1681,
+      "avgRt": 5.957168352171327,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219290000,
+      "rps": 1897,
+      "avgRt": 5.259356879283079,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219291000,
+      "rps": 1851,
+      "avgRt": 5.401404646137223,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219292000,
+      "rps": 1872,
+      "avgRt": 5.33707264957265,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219293000,
+      "rps": 1719,
+      "avgRt": 5.810354857475276,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219294000,
+      "rps": 1744,
+      "avgRt": 5.729357798165138,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219295000,
+      "rps": 1920,
+      "avgRt": 5.211458333333334,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219296000,
+      "rps": 2002,
+      "avgRt": 4.9705294705294705,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219297000,
+      "rps": 1908,
+      "avgRt": 5.263626834381552,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219298000,
+      "rps": 1822,
+      "avgRt": 5.476399560922063,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219299000,
+      "rps": 1884,
+      "avgRt": 5.305732484076433,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219300000,
+      "rps": 1937,
+      "avgRt": 5.154878678368611,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219301000,
+      "rps": 1831,
+      "avgRt": 5.453850354997269,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219302000,
+      "rps": 1944,
+      "avgRt": 5.142489711934156,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219303000,
+      "rps": 1752,
+      "avgRt": 5.704908675799087,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219304000,
+      "rps": 1964,
+      "avgRt": 5.083503054989817,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219305000,
+      "rps": 1942,
+      "avgRt": 5.1467559217301755,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219306000,
+      "rps": 1850,
+      "avgRt": 5.400540540540541,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219307000,
+      "rps": 1856,
+      "avgRt": 5.363685344827586,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219308000,
+      "rps": 1743,
+      "avgRt": 5.7538726333907055,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219309000,
+      "rps": 1941,
+      "avgRt": 5.145801133436373,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219310000,
+      "rps": 1910,
+      "avgRt": 5.231937172774869,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219311000,
+      "rps": 1947,
+      "avgRt": 5.133025166923472,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219312000,
+      "rps": 1869,
+      "avgRt": 5.349384697699304,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219313000,
+      "rps": 1764,
+      "avgRt": 5.65702947845805,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219314000,
+      "rps": 1747,
+      "avgRt": 5.7275329135661135,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219315000,
+      "rps": 1972,
+      "avgRt": 5.064401622718052,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219316000,
+      "rps": 1879,
+      "avgRt": 5.320915380521554,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219317000,
+      "rps": 1898,
+      "avgRt": 5.263435194942044,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219318000,
+      "rps": 1736,
+      "avgRt": 5.747119815668203,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219319000,
+      "rps": 1796,
+      "avgRt": 5.575723830734967,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219320000,
+      "rps": 1872,
+      "avgRt": 5.335470085470085,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219321000,
+      "rps": 2009,
+      "avgRt": 4.974614235938278,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219322000,
+      "rps": 1910,
+      "avgRt": 5.225130890052356,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219323000,
+      "rps": 1730,
+      "avgRt": 5.771676300578035,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219324000,
+      "rps": 1868,
+      "avgRt": 5.3586723768736615,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219325000,
+      "rps": 1983,
+      "avgRt": 5.036308623298034,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219326000,
+      "rps": 1965,
+      "avgRt": 5.084987277353689,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219327000,
+      "rps": 1768,
+      "avgRt": 5.626696832579186,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219328000,
+      "rps": 1648,
+      "avgRt": 5.934466019417476,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219329000,
+      "rps": 1880,
+      "avgRt": 5.452127659574468,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219330000,
+      "rps": 1932,
+      "avgRt": 5.172360248447205,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219331000,
+      "rps": 1919,
+      "avgRt": 5.205315268368942,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219332000,
+      "rps": 1877,
+      "avgRt": 5.325519445924347,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219333000,
+      "rps": 1764,
+      "avgRt": 5.667233560090703,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219334000,
+      "rps": 1918,
+      "avgRt": 5.208029197080292,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219335000,
+      "rps": 2004,
+      "avgRt": 4.983033932135728,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219336000,
+      "rps": 1995,
+      "avgRt": 5.016040100250627,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219337000,
+      "rps": 1756,
+      "avgRt": 5.639521640091116,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219338000,
+      "rps": 1750,
+      "avgRt": 5.749714285714286,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219339000,
+      "rps": 1975,
+      "avgRt": 5.067341772151899,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219340000,
+      "rps": 2025,
+      "avgRt": 4.929876543209876,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219341000,
+      "rps": 2010,
+      "avgRt": 4.976119402985074,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219342000,
+      "rps": 1927,
+      "avgRt": 5.179034769071095,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219343000,
+      "rps": 1765,
+      "avgRt": 5.639093484419264,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219344000,
+      "rps": 1876,
+      "avgRt": 5.348081023454157,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219345000,
+      "rps": 1968,
+      "avgRt": 5.078760162601626,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219346000,
+      "rps": 2039,
+      "avgRt": 4.8999509563511525,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219347000,
+      "rps": 2039,
+      "avgRt": 4.896027464443355,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219348000,
+      "rps": 1653,
+      "avgRt": 6.042952208106473,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219349000,
+      "rps": 1840,
+      "avgRt": 5.430978260869566,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219350000,
+      "rps": 1928,
+      "avgRt": 5.184128630705394,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219351000,
+      "rps": 1981,
+      "avgRt": 5.045431600201918,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219352000,
+      "rps": 1869,
+      "avgRt": 5.340823970037453,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219353000,
+      "rps": 1833,
+      "avgRt": 5.278777959629023,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219354000,
+      "rps": 1939,
+      "avgRt": 5.320268179473955,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219355000,
+      "rps": 1939,
+      "avgRt": 5.15368746776689,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219356000,
+      "rps": 1952,
+      "avgRt": 5.121413934426229,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219357000,
+      "rps": 1872,
+      "avgRt": 5.324252136752137,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219358000,
+      "rps": 1712,
+      "avgRt": 5.839369158878505,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219359000,
+      "rps": 1879,
+      "avgRt": 5.328898350186269,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219360000,
+      "rps": 1942,
+      "avgRt": 5.1385169927909375,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219361000,
+      "rps": 1986,
+      "avgRt": 5.033232628398792,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219362000,
+      "rps": 2027,
+      "avgRt": 4.929452392698569,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219363000,
+      "rps": 1779,
+      "avgRt": 5.602585722315908,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219364000,
+      "rps": 1932,
+      "avgRt": 5.182194616977226,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219365000,
+      "rps": 2080,
+      "avgRt": 4.800480769230769,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219366000,
+      "rps": 2021,
+      "avgRt": 4.9238000989609105,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219367000,
+      "rps": 1885,
+      "avgRt": 5.303978779840849,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219368000,
+      "rps": 1600,
+      "avgRt": 6.265,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219369000,
+      "rps": 1997,
+      "avgRt": 5.00951427140711,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219370000,
+      "rps": 2010,
+      "avgRt": 4.971641791044776,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219371000,
+      "rps": 1991,
+      "avgRt": 5.008538422903063,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219372000,
+      "rps": 1955,
+      "avgRt": 5.084910485933504,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219373000,
+      "rps": 1849,
+      "avgRt": 5.42671714440238,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219374000,
+      "rps": 1863,
+      "avgRt": 5.364465915190553,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219375000,
+      "rps": 1965,
+      "avgRt": 5.079389312977099,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219376000,
+      "rps": 2032,
+      "avgRt": 4.917814960629921,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219377000,
+      "rps": 1907,
+      "avgRt": 5.237545883586786,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219378000,
+      "rps": 1744,
+      "avgRt": 5.55848623853211,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219379000,
+      "rps": 1897,
+      "avgRt": 5.428571428571429,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219380000,
+      "rps": 2038,
+      "avgRt": 4.900883218842002,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219381000,
+      "rps": 2037,
+      "avgRt": 4.904270986745214,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219382000,
+      "rps": 1952,
+      "avgRt": 5.116803278688525,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219383000,
+      "rps": 1825,
+      "avgRt": 5.429041095890411,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219384000,
+      "rps": 1845,
+      "avgRt": 5.455826558265582,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219385000,
+      "rps": 1977,
+      "avgRt": 5.061709661102681,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219386000,
+      "rps": 1937,
+      "avgRt": 5.150748580278782,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219387000,
+      "rps": 1901,
+      "avgRt": 5.255128879537086,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219388000,
+      "rps": 1866,
+      "avgRt": 5.34887459807074,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219389000,
+      "rps": 1913,
+      "avgRt": 5.228437009932044,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219390000,
+      "rps": 1940,
+      "avgRt": 5.153608247422681,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219391000,
+      "rps": 1959,
+      "avgRt": 5.10260336906585,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219392000,
+      "rps": 1977,
+      "avgRt": 5.051087506322711,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219393000,
+      "rps": 1856,
+      "avgRt": 5.372306034482759,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219394000,
+      "rps": 1757,
+      "avgRt": 5.695503699487763,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219395000,
+      "rps": 1951,
+      "avgRt": 5.130189646335213,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219396000,
+      "rps": 1979,
+      "avgRt": 5.039919151086408,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219397000,
+      "rps": 1881,
+      "avgRt": 5.309941520467836,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219398000,
+      "rps": 1777,
+      "avgRt": 5.616207090602138,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219399000,
+      "rps": 1953,
+      "avgRt": 5.12083973374296,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219400000,
+      "rps": 2003,
+      "avgRt": 4.997503744383425,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219401000,
+      "rps": 1945,
+      "avgRt": 5.136760925449871,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219402000,
+      "rps": 1927,
+      "avgRt": 5.175921120913337,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219403000,
+      "rps": 1772,
+      "avgRt": 5.6360045146726865,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219404000,
+      "rps": 1666,
+      "avgRt": 6.013805522208884,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219405000,
+      "rps": 1793,
+      "avgRt": 5.569994422755159,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219406000,
+      "rps": 1863,
+      "avgRt": 5.363929146537842,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219407000,
+      "rps": 1763,
+      "avgRt": 5.649461145774248,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219408000,
+      "rps": 1877,
+      "avgRt": 5.340436867341502,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219409000,
+      "rps": 1761,
+      "avgRt": 5.678023850085179,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219410000,
+      "rps": 1971,
+      "avgRt": 5.062404870624048,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219411000,
+      "rps": 1970,
+      "avgRt": 5.074111675126904,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219412000,
+      "rps": 1986,
+      "avgRt": 5.029707955689829,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219413000,
+      "rps": 1774,
+      "avgRt": 5.619503945885006,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219414000,
+      "rps": 1892,
+      "avgRt": 5.290697674418604,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219415000,
+      "rps": 1961,
+      "avgRt": 5.092809790922998,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219416000,
+      "rps": 1933,
+      "avgRt": 5.1267459906880495,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219417000,
+      "rps": 1916,
+      "avgRt": 5.240605427974947,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219418000,
+      "rps": 1647,
+      "avgRt": 5.896782027929569,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219419000,
+      "rps": 1901,
+      "avgRt": 5.418726985796949,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219420000,
+      "rps": 1994,
+      "avgRt": 5.011033099297894,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219421000,
+      "rps": 1944,
+      "avgRt": 5.1419753086419755,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219422000,
+      "rps": 1983,
+      "avgRt": 5.038325769036813,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219423000,
+      "rps": 1805,
+      "avgRt": 5.530747922437673,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219424000,
+      "rps": 1893,
+      "avgRt": 5.257263602746963,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219425000,
+      "rps": 1965,
+      "avgRt": 5.107888040712468,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219426000,
+      "rps": 1966,
+      "avgRt": 5.082909460834181,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219427000,
+      "rps": 1918,
+      "avgRt": 5.210114702815432,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219428000,
+      "rps": 1797,
+      "avgRt": 5.545353366722315,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219429000,
+      "rps": 1716,
+      "avgRt": 5.8292540792540795,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219430000,
+      "rps": 2012,
+      "avgRt": 4.963220675944334,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219431000,
+      "rps": 1862,
+      "avgRt": 5.377013963480129,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219432000,
+      "rps": 1956,
+      "avgRt": 5.1094069529652355,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219433000,
+      "rps": 1637,
+      "avgRt": 6.085522296884545,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219434000,
+      "rps": 1751,
+      "avgRt": 5.713877784123358,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219435000,
+      "rps": 1746,
+      "avgRt": 5.723940435280642,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219436000,
+      "rps": 1957,
+      "avgRt": 5.1083290751149715,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219437000,
+      "rps": 1797,
+      "avgRt": 5.534223706176961,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219438000,
+      "rps": 1684,
+      "avgRt": 5.927553444180522,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219439000,
+      "rps": 1835,
+      "avgRt": 5.472479564032698,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219440000,
+      "rps": 1928,
+      "avgRt": 5.172717842323651,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219441000,
+      "rps": 1967,
+      "avgRt": 5.086934417895272,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219442000,
+      "rps": 1867,
+      "avgRt": 5.356186395286556,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219443000,
+      "rps": 1805,
+      "avgRt": 5.528531855955679,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219444000,
+      "rps": 1927,
+      "avgRt": 5.194603009859886,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219445000,
+      "rps": 1953,
+      "avgRt": 5.117767537122376,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219446000,
+      "rps": 1942,
+      "avgRt": 5.143151390319258,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219447000,
+      "rps": 1970,
+      "avgRt": 5.049238578680203,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219448000,
+      "rps": 1712,
+      "avgRt": 5.866238317757009,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219449000,
+      "rps": 1983,
+      "avgRt": 5.0368129097327285,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219450000,
+      "rps": 1959,
+      "avgRt": 5.103113833588566,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219451000,
+      "rps": 2005,
+      "avgRt": 4.980548628428927,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219452000,
+      "rps": 1999,
+      "avgRt": 4.998499249624812,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219453000,
+      "rps": 1878,
+      "avgRt": 5.301384451544196,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219454000,
+      "rps": 1889,
+      "avgRt": 5.307570142932769,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219455000,
+      "rps": 2023,
+      "avgRt": 4.937716262975779,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219456000,
+      "rps": 1984,
+      "avgRt": 5.031754032258065,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219457000,
+      "rps": 1872,
+      "avgRt": 5.332264957264957,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219458000,
+      "rps": 1857,
+      "avgRt": 5.383414108777599,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219459000,
+      "rps": 1891,
+      "avgRt": 5.2887361184558435,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219460000,
+      "rps": 2029,
+      "avgRt": 4.920157713159192,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219461000,
+      "rps": 1872,
+      "avgRt": 5.3381410256410255,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219462000,
+      "rps": 2013,
+      "avgRt": 4.963735717834078,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219463000,
+      "rps": 1758,
+      "avgRt": 5.665529010238908,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219464000,
+      "rps": 1928,
+      "avgRt": 5.190871369294606,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219465000,
+      "rps": 1674,
+      "avgRt": 5.9778972520908,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219466000,
+      "rps": 1890,
+      "avgRt": 5.116931216931217,
+      "errors": 0
+    },
+    {
+      "timestamp": 1773219467000,
+      "rps": 5,
+      "avgRt": 57.6,
+      "errors": 0
+    }
+  ],
+  "histogram": [
+    {
+      "label": "0-50ms",
+      "count": 338802
+    },
+    {
+      "label": "50-100ms",
+      "count": 881
+    },
+    {
+      "label": "100-200ms",
+      "count": 0
+    },
+    {
+      "label": "200-500ms",
+      "count": 0
+    },
+    {
+      "label": "500ms-1s",
+      "count": 0
+    },
+    {
+      "label": "1s+",
+      "count": 0
+    }
+  ]
+},
+  "system": {
+    "pre":  {"mulePerf": {
+  "heapUsedMB": 218,
+  "heapMaxMB": 2048,
+  "heapPct": 11,
+  "nonHeapMB": 211,
+  "cpuPct": 1,
+  "availableProcessors": 2,
+  "systemCpuPct": 2,
+  "threadCount": 60,
+  "peakThreadCount": 63,
+  "activeTests": 2,
+  "totalTests": 2,
+  "uptimeSeconds": 4211
+}, "benchTarget": {
+  "heapUsedMB": 229,
+  "heapMaxMB": 2048,
+  "heapPct": 11,
+  "processors": 2,
+  "threadCount": 56,
+  "peakThreadCount": 143,
+  "uptimeSeconds": 3964,
+  "cpuPct": 2,
+  "systemCpuPct": 4
+}},
+    "q1":   {"mulePerf": {
+  "heapUsedMB": 243,
+  "heapMaxMB": 2048,
+  "heapPct": 12,
+  "nonHeapMB": 211,
+  "cpuPct": 13,
+  "availableProcessors": 2,
+  "systemCpuPct": 12,
+  "threadCount": 61,
+  "peakThreadCount": 63,
+  "activeTests": 3,
+  "totalTests": 3,
+  "uptimeSeconds": 4271
+}, "benchTarget": {
+  "heapUsedMB": 263,
+  "heapMaxMB": 2048,
+  "heapPct": 13,
+  "processors": 2,
+  "threadCount": 66,
+  "peakThreadCount": 143,
+  "uptimeSeconds": 4025,
+  "cpuPct": 95,
+  "systemCpuPct": 97
+}},
+    "mid":  {"mulePerf": {
+  "heapUsedMB": 181,
+  "heapMaxMB": 2048,
+  "heapPct": 9,
+  "nonHeapMB": 211,
+  "cpuPct": 11,
+  "availableProcessors": 2,
+  "systemCpuPct": 12,
+  "threadCount": 61,
+  "peakThreadCount": 63,
+  "activeTests": 3,
+  "totalTests": 3,
+  "uptimeSeconds": 4317
+}, "benchTarget": {
+  "heapUsedMB": 400,
+  "heapMaxMB": 2048,
+  "heapPct": 20,
+  "processors": 2,
+  "threadCount": 66,
+  "peakThreadCount": 143,
+  "uptimeSeconds": 4070,
+  "cpuPct": 97,
+  "systemCpuPct": 99
+}},
+    "q3":   {"mulePerf": {
+  "heapUsedMB": 249,
+  "heapMaxMB": 2048,
+  "heapPct": 12,
+  "nonHeapMB": 211,
+  "cpuPct": 12,
+  "availableProcessors": 2,
+  "systemCpuPct": 12,
+  "threadCount": 61,
+  "peakThreadCount": 63,
+  "activeTests": 3,
+  "totalTests": 3,
+  "uptimeSeconds": 4362
+}, "benchTarget": {
+  "heapUsedMB": 426,
+  "heapMaxMB": 2048,
+  "heapPct": 21,
+  "processors": 2,
+  "threadCount": 65,
+  "peakThreadCount": 143,
+  "uptimeSeconds": 4115,
+  "cpuPct": 96,
+  "systemCpuPct": 98
+}},
+    "post": {"mulePerf": {
+  "heapUsedMB": 157,
+  "heapMaxMB": 2048,
+  "heapPct": 8,
+  "nonHeapMB": 211,
+  "cpuPct": 0,
+  "availableProcessors": 2,
+  "systemCpuPct": 0,
+  "threadCount": 60,
+  "peakThreadCount": 63,
+  "activeTests": 2,
+  "totalTests": 3,
+  "uptimeSeconds": 4417
+}, "benchTarget": {
+  "heapUsedMB": 465,
+  "heapMaxMB": 2048,
+  "heapPct": 23,
+  "processors": 2,
+  "threadCount": 67,
+  "peakThreadCount": 143,
+  "uptimeSeconds": 4171,
+  "cpuPct": 17,
+  "systemCpuPct": 18
+}}
+  }
+}

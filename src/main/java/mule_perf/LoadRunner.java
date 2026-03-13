@@ -31,23 +31,43 @@ public class LoadRunner {
     private static volatile boolean termAlive = false;
     private static volatile int termColumns = 120;
 
+    private static volatile int termRows = 24;
+
     public static void setTermColumns(int cols) {
         termColumns = Math.max(40, Math.min(cols, 500));
-        // Update running shell if alive
+    }
+
+    public static boolean setTermSize(int cols, int rows) {
+        termColumns = Math.max(40, Math.min(cols, 500));
+        termRows = Math.max(10, Math.min(rows, 200));
         if (termProcess != null && termProcess.isAlive() && termStdin != null) {
             try {
-                termStdin.write(("stty columns " + termColumns + " 2>/dev/null; export COLUMNS=" + termColumns + "\n").getBytes());
+                // stty updates PTY winsize (triggers SIGWINCH), also export env vars
+                String cmd = " stty cols " + termColumns + " rows " + termRows
+                    + " 2>/dev/null; export COLUMNS=" + termColumns + " LINES=" + termRows + "\n";
+                termStdin.write(cmd.getBytes());
                 termStdin.flush();
             } catch (Exception ignored) {}
         }
+        return true;
     }
+
+    private static final String TERM_PS1 =
+        "\\[\\033[1;34m\\]\\u@\\h\\[\\033[0m\\]:\\[\\033[1;32m\\]\\w\\[\\033[0m\\]\\$ ";
 
     private static synchronized void ensureTermProcess() throws Exception {
         if (termProcess != null && termProcess.isAlive()) return;
-        ProcessBuilder pb = new ProcessBuilder("sh");
+        // Use 'script' to allocate a PTY for the shell (bash -i sources .bashrc for checkwinsize etc.)
+        ProcessBuilder pb = new ProcessBuilder(
+            "script", "-qfc",
+            "stty cols " + termColumns + " rows " + termRows + " 2>/dev/null; exec /bin/bash -i",
+            "/dev/null"
+        );
         pb.redirectErrorStream(true);
         pb.environment().put("COLUMNS", String.valueOf(termColumns));
+        pb.environment().put("LINES", String.valueOf(termRows));
         pb.environment().put("TERM", "xterm-256color");
+        pb.environment().put("COLORTERM", "truecolor");
         termProcess = pb.start();
         termStdin = termProcess.getOutputStream();
         termAlive = true;
@@ -66,6 +86,13 @@ public class LoadRunner {
         });
         reader.setDaemon(true);
         reader.start();
+        // Override PS1 after .bashrc, add color aliases, then clear
+        String init = " export PS1='" + TERM_PS1 + "'; "
+            + "shopt -s checkwinsize; "
+            + "alias ls='ls --color=auto'; alias grep='grep --color=auto'; "
+            + "clear\n";
+        termStdin.write(init.getBytes());
+        termStdin.flush();
     }
 
     public static Map<String, Object> termWrite(String input, String key) {
@@ -74,7 +101,8 @@ public class LoadRunner {
         if (!execKey.equals(key)) { result.put("error", "Invalid exec key."); return result; }
         try {
             ensureTermProcess();
-            termStdin.write((input + "\n").getBytes());
+            // Send raw data (no newline appended — client sends \r for Enter)
+            termStdin.write(input.getBytes());
             termStdin.flush();
             result.put("ok", true);
         } catch (Exception e) {
@@ -116,12 +144,14 @@ public class LoadRunner {
         return sharedClient;
     }
 
+
     // ── Test State ──────────────────────────────────────────────
 
     static class TestState {
         final String id;
         final String url;
         final String method;
+        final String body;          // request body for POST (null for GET)
         final int concurrency;
         final int durationSec;
         final int warmupSec;
@@ -181,10 +211,11 @@ public class LoadRunner {
         // Per-second time series
         final ConcurrentHashMap<Long, long[]> timeSeries = new ConcurrentHashMap<>();
 
-        TestState(String id, String url, String method, int concurrency, int durationSec, int warmupSec) {
+        TestState(String id, String url, String method, String body, int concurrency, int durationSec, int warmupSec) {
             this.id = id;
             this.url = url;
             this.method = method;
+            this.body = body;
             this.concurrency = concurrency;
             this.durationSec = durationSec;
             this.warmupSec = warmupSec;
@@ -257,9 +288,9 @@ public class LoadRunner {
 
     // ── Public API (called from DataWeave) ──────────────────────
 
-    public static String start(String testId, String url, String method, int concurrency, int durationSec, int warmupSec) {
+    public static String start(String testId, String url, String method, String body, int concurrency, int durationSec, int warmupSec) {
         if (testId == null || testId.isEmpty()) testId = UUID.randomUUID().toString();
-        TestState state = new TestState(testId, url, method.toUpperCase(), concurrency, durationSec, warmupSec);
+        TestState state = new TestState(testId, url, method.toUpperCase(), body, concurrency, durationSec, warmupSec);
         tests.put(testId, state);
 
         long endTime = durationSec <= 0 ? Long.MAX_VALUE : state.startTime + (long) warmupSec * 1000 + (long) durationSec * 1000;
@@ -316,14 +347,14 @@ public class LoadRunner {
         return testId;
     }
 
-    public static String startStepLoad(String testId, String url, String method,
+    public static String startStepLoad(String testId, String url, String method, String body,
             int startConn, int stepInc, int maxConn, int stepDurSec, int warmupSec,
             int errorThreshold, int maxDurationSec) {
         if (testId == null || testId.isEmpty()) testId = UUID.randomUUID().toString();
         int totalSteps = Math.max(1, (maxConn - startConn) / Math.max(1, stepInc) + 1);
         int stepTotal = totalSteps * stepDurSec;
         int totalDuration = maxDurationSec > 0 ? Math.min(stepTotal, maxDurationSec) : stepTotal;
-        TestState state = new TestState(testId, url, method.toUpperCase(), maxConn, totalDuration, warmupSec);
+        TestState state = new TestState(testId, url, method.toUpperCase(), body, maxConn, totalDuration, warmupSec);
         state.stepMode = true;
         state.stepStart = startConn;
         state.stepInc = stepInc;
@@ -566,6 +597,10 @@ public class LoadRunner {
         req.method(state.method);
         req.timeout(30000);
         req.followRedirects(true);
+        if (state.body != null && !state.body.isEmpty()) {
+            req.header("Content-Type", "application/json");
+            req.body(state.body);
+        }
 
         long start = System.currentTimeMillis();
         state.inFlight.incrementAndGet();

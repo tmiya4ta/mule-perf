@@ -7,6 +7,9 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -562,19 +565,18 @@ tr:hover td{background:var(--bg)}
 .nav-item.console-toggle:hover{color:white;background:rgba(255,255,255,.1);transform:scale(1.08)}
 .nav-item.console-toggle:active{transform:scale(.95)}
 .nav-item.console-toggle.active{background:rgba(255,255,255,.12);color:white}
+.nav-item.console-toggle.disabled{opacity:.25;pointer-events:none;cursor:default}
 
 /* ── Virtual Terminal Panel ── */
 .term-panel{
-  position:fixed;bottom:0;left:0;right:0;height:50vh;
+  position:fixed;bottom:0;left:0;right:0;height:0;
   background:rgba(12,12,12,.85);
-  color:#cccccc;
-  font-family:var(--font-mono);font-size:13px;line-height:1.4;
   z-index:900;transition:height .3s cubic-bezier(.16,1,.3,1);
   display:flex;flex-direction:column;
-  box-shadow:0 -4px 24px rgba(0,0,0,.5);
+  box-shadow:none;
   overflow:hidden;
 }
-.term-panel.open{height:50vh}
+.term-panel.open{height:50vh;box-shadow:0 -4px 24px rgba(0,0,0,.5)}
 .term-panel.maximized{height:100vh !important}
 .term-header{
   display:flex;align-items:center;justify-content:space-between;
@@ -599,34 +601,10 @@ tr:hover td{background:var(--bg)}
 .term-action:hover{background:#333;color:#e0e0e0}
 .term-action svg{width:14px;height:14px}
 .term-body{
-  flex:1;overflow-y:auto;padding:8px 12px;
-  scrollbar-width:thin;scrollbar-color:#333 transparent;
-  cursor:text;
+  flex:1;overflow:hidden;padding:0;
 }
-.term-body::-webkit-scrollbar{width:8px}
-.term-body::-webkit-scrollbar-track{background:transparent}
-.term-body::-webkit-scrollbar-thumb{background:#444;border-radius:4px}
-.term-body::-webkit-scrollbar-thumb:hover{background:#555}
-.term-line{white-space:pre-wrap;word-break:break-all}
-.term-line.out{color:#cccccc}
-.term-line.err{color:#f14c4c}
-.term-line.sys{color:#608b4e;font-style:italic}
-.term-prompt-line{display:flex;align-items:flex-start}
-.term-ps1{color:#6a9955;white-space:nowrap;margin-right:0}
-.term-ps1 .term-user{color:#569cd6}
-.term-ps1 .term-sep{color:#cccccc}
-.term-ps1 .term-cwd{color:#b5cea8}
-.term-ps1 .term-dollar{color:#cccccc;white-space:pre}
-.term-cmd-text{color:#dcdcaa}
-.term-active-line{display:flex;align-items:flex-start}
-.term-active-line .term-inline-input{
-  flex:1;background:none;border:none;outline:none;
-  color:#dcdcaa;font-family:var(--font-mono);font-size:13px;line-height:1.4;
-  caret-color:#aeafad;padding:0;
-}
-.term-busy .term-active-line .term-inline-input{opacity:.5;pointer-events:none}
-.term-busy .term-active-line .term-ps1{opacity:.5}
-@keyframes term-blink{0%,100%{opacity:1}50%{opacity:0}}
+.term-body .xterm{height:100%}
+.term-body .xterm-viewport{scrollbar-width:thin;scrollbar-color:#333 transparent}
 
 /* ── Password Modal ── */
 .pw-backdrop{
@@ -808,7 +786,7 @@ tr:hover td{background:var(--bg)}
   <div class="nav-item new-test" id="navNewTest" title="New Test" onclick="toggleDrawer()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
   </div>
-  <div class="nav-item console-toggle" id="navConsole" title="Console" onclick="toggleTerminal()">
+  <div class="nav-item console-toggle disabled" id="navConsole" title="Unlock Exec Key to use Console" onclick="toggleTerminal()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
   </div>
   <div class="nav-spacer"></div>
@@ -833,7 +811,7 @@ tr:hover td{background:var(--bg)}
       </button>
     </div>
   </div>
-  <div class="term-body" id="termOutput" onclick="focusTermInput()"></div>
+  <div class="term-body" id="termOutput"></div>
 </div>
 
 <div class="app-body">
@@ -939,7 +917,7 @@ tr:hover td{background:var(--bg)}
             <label>Concurrency</label>
             <div class="num-input">
               <div class="num-spin minus" onclick="spinNum('concurrency',-1)">&minus;</div>
-              <input type="number" id="concurrency" value="5" min="1" max="100">
+              <input type="number" id="concurrency" value="5" min="1" max="10000">
               <div class="num-spin plus" onclick="spinNum('concurrency',1)">+</div>
             </div>
           </div>
@@ -952,11 +930,11 @@ tr:hover td{background:var(--bg)}
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
                 <div>
                   <label style="font-size:.65rem;color:var(--text-tertiary)">Start</label>
-                  <input type="number" id="stepStart" value="1" min="1" max="100" class="step-input">
+                  <input type="number" id="stepStart" value="1" min="1" max="10000" class="step-input">
                 </div>
                 <div>
                   <label style="font-size:.65rem;color:var(--text-tertiary)">Step +</label>
-                  <input type="number" id="stepInc" value="5" min="1" max="50" class="step-input">
+                  <input type="number" id="stepInc" value="5" min="1" max="10000" class="step-input">
                 </div>
               </div>
               <div>
@@ -1719,7 +1697,7 @@ function validateNumInput(id, min, max, fallback) {
 
 async function executeTest() {
   const isStep = document.getElementById('stepLoadEnabled').checked;
-  const concurrency = validateNumInput('concurrency', 1, isStep ? 500 : 100, 5);
+  const concurrency = validateNumInput('concurrency', 1, 10000, 5);
   const duration = validateNumInput('duration', 1, 3600, 30);
   const warmup = validateNumInput('warmup', 0, 300, 0);
   const urlVal = document.getElementById('targetUrl').value.trim();
@@ -2258,12 +2236,16 @@ function togglePwVis() {
 let currentExecKey = null;
 function markExecKeySet(key) {
   const btn = document.getElementById('execKeyBtn');
+  const consoleBtn = document.getElementById('navConsole');
   btn.classList.add('set');
   if (key) {
     currentExecKey = key;
     document.getElementById('execKeyLabel').textContent = 'Key Ready';
     btn.onclick = copyExecKey;
     btn.title = 'Click to copy exec key';
+    // Enable console button
+    consoleBtn.classList.remove('disabled');
+    consoleBtn.title = 'Console';
     // If terminal is open, init session
     if (document.getElementById('termPanel').classList.contains('open')) {
       initTermSession();
@@ -2274,7 +2256,6 @@ function markExecKeySet(key) {
     btn.onclick = generateExecKey;
     btn.title = 'Enter password to unlock exec key';
   }
-  updateTermPrompt();
 }
 async function checkExecKey() {
   try {
@@ -2336,71 +2317,63 @@ function copyExecKey() {
 checkExecKey();
 
 // ── Virtual Terminal (persistent shell + polling) ──
-const termHistory = [];
-let termHistoryIdx = -1;
-let termCwd = '~';
-let termUser = 'mule';
-let termHost = 'app';
-let termBusy = false;
+// ── xterm.js Terminal ──
+let xterm = null;
+let xtermFit = null;
 let termPollTimer = null;
-let termLineBuf = '';
 let termSessionInited = false;
-let termKillRing = '';
-const TERM_DONE_MARKER = /^<<MTERM:(\d+):(.+?):MTERM>>$/;
-const TERM_INIT_MARKER = /^<<MTERM_INIT:(.+?):(.+?):(.+?):MTERM_INIT>>$/;
 
-function termPs1Html() {
-  return `<span class="term-user">${termUser}@${termHost}</span><span class="term-sep">:</span><span class="term-cwd">${termCwd}</span><span class="term-dollar">$ </span>`;
-}
-function updateTermPrompt() {
-  document.getElementById('termTabLabel').textContent = termCwd === '~' ? 'Terminal' : termCwd.split('/').pop() || '/';
-  // Update the active inline prompt if it exists
-  const ps1 = document.querySelector('.term-active-line .term-ps1');
-  if (ps1) ps1.innerHTML = termPs1Html();
+function initXterm() {
+  if (xterm) return;
+  xterm = new Terminal({
+    cursorBlink: true,
+    fontSize: 13,
+    fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace",
+    theme: {
+      background: 'rgba(0,0,0,0)',
+      foreground: '#cccccc',
+      cursor: '#aeafad',
+      selectionBackground: 'rgba(255,255,255,0.2)',
+    },
+    allowTransparency: true,
+    scrollback: 5000,
+  });
+  xtermFit = new FitAddon.FitAddon();
+  xterm.loadAddon(xtermFit);
+  xterm.open(document.getElementById('termOutput'));
+  xtermFit.fit();
+
+  // Send keystrokes to server
+  xterm.onData(data => {
+    if (!currentExecKey) return;
+    fetch(`${API}/api/term/input`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cmd: data, key: currentExecKey })
+    }).catch(() => {});
+  });
+
+  // Send resize to server
+  xterm.onResize(({ cols, rows }) => {
+    if (!currentExecKey) return;
+    fetch(`${API}/api/term/resize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cols, rows })
+    }).catch(() => {});
+  });
 }
 
-function ensureTermInput() {
-  // If there's already an active input line, return its input
-  let existing = document.querySelector('.term-active-line');
-  if (existing) return existing.querySelector('.term-inline-input');
-  // Create a new prompt + input line inside term-body
-  const out = document.getElementById('termOutput');
-  const line = document.createElement('div');
-  line.className = 'term-prompt-line term-active-line';
-  const ps1 = document.createElement('span');
-  ps1.className = 'term-ps1';
-  ps1.innerHTML = termPs1Html();
-  const inp = document.createElement('input');
-  inp.className = 'term-inline-input';
-  inp.type = 'text';
-  inp.autocomplete = 'off';
-  inp.spellcheck = false;
-  inp.addEventListener('keydown', termKeyDown);
-  line.appendChild(ps1);
-  line.appendChild(inp);
-  out.appendChild(line);
-  out.scrollTop = out.scrollHeight;
-  return inp;
-}
-
-function focusTermInput() {
-  const inp = ensureTermInput();
-  if (inp) inp.focus();
-}
-
-function freezeActiveInput() {
-  // Convert active input line to static text
-  const line = document.querySelector('.term-active-line');
-  if (!line) return;
-  const inp = line.querySelector('.term-inline-input');
-  const cmd = inp ? inp.value : '';
-  const cmdSpan = document.createElement('span');
-  cmdSpan.className = 'term-cmd-text';
-  cmdSpan.textContent = cmd;
-  if (inp) inp.remove();
-  line.appendChild(cmdSpan);
-  line.classList.remove('term-active-line');
-  return cmd;
+function termFitAfterTransition() {
+  const panel = document.getElementById('termPanel');
+  const handler = () => {
+    panel.removeEventListener('transitionend', handler);
+    if (xtermFit) xtermFit.fit();
+    if (xterm) xterm.focus();
+  };
+  panel.addEventListener('transitionend', handler);
+  // Fallback in case transitionend doesn't fire
+  setTimeout(handler, 400);
 }
 
 function toggleTerminal() {
@@ -2410,60 +2383,53 @@ function toggleTerminal() {
   panel.classList.toggle('open');
   btn.classList.toggle('active');
   if (opening) {
+    if (!xterm) initXterm();
     if (currentExecKey) {
       if (!termSessionInited) initTermSession();
       startTermPoll();
-    } else if (!document.getElementById('termOutput').hasChildNodes()) {
-      termAppendSys('Exec key not set. Use the Exec Key button in the top bar to unlock.');
     }
-    const inp = ensureTermInput();
-    if (inp) inp.focus();
+    termFitAfterTransition();
   } else {
     stopTermPoll();
     panel.classList.remove('maximized');
   }
 }
+
 function termMaximize() {
   document.getElementById('termPanel').classList.toggle('maximized');
-  document.getElementById('termInput').focus();
+  termFitAfterTransition();
 }
 
 function startTermPoll() {
   if (termPollTimer) return;
-  termPollTimer = setInterval(pollTermOutput, 150);
+  termPollTimer = setInterval(pollTermOutput, 100);
 }
 function stopTermPoll() {
   if (termPollTimer) { clearInterval(termPollTimer); termPollTimer = null; }
 }
 
-async function sendTermResize() {
-  const termOut = document.getElementById('termOutput');
-  if (!termOut || !currentExecKey) return;
-  // Estimate columns from terminal width (monospace ~7.8px per char)
-  const cols = Math.floor(termOut.clientWidth / 7.8) || 120;
-  try {
-    await fetch(`${API}/api/term/resize`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cols })
-    });
-  } catch(e) {}
-}
-
 async function initTermSession() {
   if (termSessionInited || !currentExecKey) return;
   termSessionInited = true;
+  // Trigger shell start by sending empty read
   try {
-    await sendTermResize();
     await fetch(`${API}/api/term/input`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cmd: 'echo "<<MTERM_INIT:$(whoami 2>/dev/null||id -un 2>/dev/null||echo mule):$(hostname 2>/dev/null||cat /etc/hostname 2>/dev/null||echo app):$(pwd):MTERM_INIT>>"',
-        key: currentExecKey
-      })
+      body: JSON.stringify({ cmd: '', key: currentExecKey })
     });
     startTermPoll();
+    // Send initial resize after a short delay
+    setTimeout(() => {
+      if (xterm && xtermFit) {
+        xtermFit.fit();
+        fetch(`${API}/api/term/resize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cols: xterm.cols, rows: xterm.rows })
+        }).catch(() => {});
+      }
+    }, 200);
   } catch(e) {}
 }
 
@@ -2477,258 +2443,9 @@ async function pollTermOutput() {
     });
     const data = await res.json();
     if (data.error) return;
-    if (data.output) processTermOutput(data.output);
+    if (data.output && xterm) xterm.write(data.output);
   } catch(e) {}
 }
-
-function processTermOutput(raw) {
-  termLineBuf += raw;
-  const parts = termLineBuf.split('\n');
-  termLineBuf = parts.pop(); // keep incomplete last line
-  const out = document.getElementById('termOutput');
-  for (const line of parts) {
-    // Check for init marker
-    const im = line.match(TERM_INIT_MARKER);
-    if (im) {
-      termUser = im[1]; termHost = im[2]; termCwd = im[3];
-      updateTermPrompt();
-      continue;
-    }
-    // Check for done marker
-    const dm = line.match(TERM_DONE_MARKER);
-    if (dm) {
-      const exitCode = parseInt(dm[1]);
-      termCwd = dm[2];
-      updateTermPrompt();
-      if (exitCode !== 0) termAppend(`exit ${exitCode}`, 'err');
-      termSetBusy(false);
-      continue;
-    }
-    // Regular output
-    const div = document.createElement('div');
-    div.className = 'term-line out';
-    div.textContent = line;
-    out.appendChild(div);
-  }
-  out.scrollTop = out.scrollHeight;
-}
-
-function updateTermStatus() { updateTermPrompt(); }
-
-function termAppendPrompt(cmd) {
-  // This is now handled by freezeActiveInput + ensureTermInput
-  // But keep for explicit prompt display (e.g. Ctrl+C)
-  const out = document.getElementById('termOutput');
-  const div = document.createElement('div');
-  div.className = 'term-prompt-line';
-  const ps1 = document.createElement('span');
-  ps1.className = 'term-ps1';
-  ps1.innerHTML = termPs1Html();
-  const cmdSpan = document.createElement('span');
-  cmdSpan.className = 'term-cmd-text';
-  cmdSpan.textContent = cmd;
-  div.appendChild(ps1);
-  div.appendChild(cmdSpan);
-  out.appendChild(div);
-  out.scrollTop = out.scrollHeight;
-}
-
-function termAppend(text, cls) {
-  const out = document.getElementById('termOutput');
-  const lines = text.split('\n');
-  for (const l of lines) {
-    const div = document.createElement('div');
-    div.className = 'term-line ' + (cls || 'out');
-    div.textContent = l;
-    out.appendChild(div);
-  }
-  out.scrollTop = out.scrollHeight;
-}
-function termAppendSys(text) { termAppend(text, 'sys'); }
-
-function termSetBusy(busy) {
-  termBusy = busy;
-  const panel = document.getElementById('termPanel');
-  if (busy) panel.classList.add('term-busy');
-  else {
-    panel.classList.remove('term-busy');
-    // Create new input line when command finishes
-    const inp = ensureTermInput();
-    if (inp) inp.focus();
-  }
-}
-
-async function termExec(cmd) {
-  // Freeze the current input line (converts to static text)
-  freezeActiveInput();
-
-  if (!cmd.trim()) { ensureTermInput(); return; }
-  termHistory.unshift(cmd);
-  termHistoryIdx = -1;
-
-  if (cmd.trim() === 'clear') {
-    document.getElementById('termOutput').innerHTML = '';
-    ensureTermInput().focus();
-    return;
-  }
-  if (!currentExecKey) {
-    termAppend('exec key not set — use Exec Key button to unlock', 'err');
-    ensureTermInput().focus();
-    return;
-  }
-
-  termSetBusy(true);
-  // Send command + done marker (captures exit code and cwd)
-  const wrapped = cmd + '\n__mtr=$?; echo "<<MTERM:${__mtr}:$(pwd):MTERM>>"';
-  try {
-    const res = await fetch(`${API}/api/term/input`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cmd: wrapped, key: currentExecKey })
-    });
-    const data = await res.json();
-    if (data.error) {
-      termAppend(data.error, 'err');
-      termSetBusy(false);
-      ensureTermInput().focus();
-    }
-  } catch (e) {
-    termAppend('Connection failed: ' + e.message, 'err');
-    termSetBusy(false);
-    ensureTermInput().focus();
-  }
-}
-
-function termKeyDown(e) {
-  const input = e.target;
-  if (termBusy && e.key === 'Enter') { e.preventDefault(); return; }
-
-  // ── Ctrl keybindings ──
-  if (e.ctrlKey && !e.altKey && !e.metaKey) {
-    const key = e.key.toLowerCase();
-    switch (key) {
-      case 'a': e.preventDefault(); input.setSelectionRange(0, 0); return;
-      case 'e': e.preventDefault(); input.setSelectionRange(input.value.length, input.value.length); return;
-      case 'u': e.preventDefault(); termKillRing = input.value.substring(0, input.selectionStart); input.value = input.value.substring(input.selectionStart); input.setSelectionRange(0, 0); return;
-      case 'k': e.preventDefault(); termKillRing = input.value.substring(input.selectionStart); input.value = input.value.substring(0, input.selectionStart); return;
-      case 'w': e.preventDefault(); { const pos = input.selectionStart; const before = input.value.substring(0, pos); const m = before.match(/\s*\S+\s*$/); const cut = m ? m[0].length : 0; termKillRing = before.substring(pos - cut); input.value = before.substring(0, pos - cut) + input.value.substring(pos); input.setSelectionRange(pos - cut, pos - cut); } return;
-      case 'y': e.preventDefault(); if (termKillRing) { const pos = input.selectionStart; input.value = input.value.substring(0, pos) + termKillRing + input.value.substring(pos); input.setSelectionRange(pos + termKillRing.length, pos + termKillRing.length); } return;
-      case 'b': e.preventDefault(); if (input.selectionStart > 0) input.setSelectionRange(input.selectionStart - 1, input.selectionStart - 1); return;
-      case 'f': e.preventDefault(); if (input.selectionStart < input.value.length) input.setSelectionRange(input.selectionStart + 1, input.selectionStart + 1); return;
-      case 'd': e.preventDefault(); if (input.value.length === 0) { toggleTerminal(); return; } { const pos = input.selectionStart; input.value = input.value.substring(0, pos) + input.value.substring(pos + 1); input.setSelectionRange(pos, pos); } return;
-      case 'h': return;
-      case 'l': e.preventDefault(); document.getElementById('termOutput').innerHTML = ''; ensureTermInput().focus(); return;
-      case 'c': e.preventDefault(); input.value += '^C'; freezeActiveInput(); termHistoryIdx = -1; ensureTermInput().focus(); return;
-      case 'p': e.preventDefault(); if (termHistoryIdx < termHistory.length - 1) { termHistoryIdx++; input.value = termHistory[termHistoryIdx]; } return;
-      case 'n': e.preventDefault(); if (termHistoryIdx > 0) { termHistoryIdx--; input.value = termHistory[termHistoryIdx]; } else { termHistoryIdx = -1; input.value = ''; } return;
-    }
-  }
-  // ── Alt keybindings ──
-  if (e.altKey && !e.ctrlKey && !e.metaKey) {
-    const key = e.key.toLowerCase();
-    switch (key) {
-      case 'b': e.preventDefault(); { const pos = input.selectionStart; const before = input.value.substring(0, pos); const m = before.match(/\S+\s*$/); const target = m ? pos - m[0].length : 0; input.setSelectionRange(target, target); } return;
-      case 'f': e.preventDefault(); { const pos = input.selectionStart; const after = input.value.substring(pos); const m = after.match(/^\s*\S+/); const target = m ? pos + m[0].length : input.value.length; input.setSelectionRange(target, target); } return;
-      case 'd': e.preventDefault(); { const pos = input.selectionStart; const after = input.value.substring(pos); const m = after.match(/^\s*\S+/); const cut = m ? m[0].length : 0; termKillRing = after.substring(0, cut); input.value = input.value.substring(0, pos) + after.substring(cut); input.setSelectionRange(pos, pos); } return;
-      case 'backspace': e.preventDefault(); { const pos = input.selectionStart; const before = input.value.substring(0, pos); const m = before.match(/\s*\S+\s*$/); const cut = m ? m[0].length : 0; termKillRing = before.substring(pos - cut); input.value = before.substring(0, pos - cut) + input.value.substring(pos); input.setSelectionRange(pos - cut, pos - cut); } return;
-    }
-  }
-  // ── Regular keys ──
-  if (e.key === 'Enter') { const cmd = input.value; input.value = ''; termExec(cmd); }
-  else if (e.key === 'ArrowUp') { e.preventDefault(); if (termHistoryIdx < termHistory.length - 1) { termHistoryIdx++; input.value = termHistory[termHistoryIdx]; } }
-  else if (e.key === 'ArrowDown') { e.preventDefault(); if (termHistoryIdx > 0) { termHistoryIdx--; input.value = termHistory[termHistoryIdx]; } else { termHistoryIdx = -1; input.value = ''; } }
-  else if (e.key === 'Tab') { e.preventDefault(); termComplete(input); }
-}
-
-// ── Tab Completion ──
-let termCompleteCache = null; // {word, candidates, index} for cycling
-
-async function termComplete(input) {
-  if (!currentExecKey) return;
-  const val = input.value;
-  const pos = input.selectionStart;
-  const before = val.substring(0, pos);
-
-  // Extract the word being completed
-  const wordMatch = before.match(/(\S+)$/);
-  const word = wordMatch ? wordMatch[1] : '';
-  const wordStart = wordMatch ? pos - wordMatch[1].length : pos;
-  const isFirstWord = !before.substring(0, wordStart).trim();
-
-  // Check if we're cycling through cached candidates (double-tab)
-  if (termCompleteCache && termCompleteCache.word === word && termCompleteCache.candidates.length > 1) {
-    termCompleteCache.index = (termCompleteCache.index + 1) % termCompleteCache.candidates.length;
-    const pick = termCompleteCache.candidates[termCompleteCache.index];
-    input.value = val.substring(0, wordStart) + pick + val.substring(pos);
-    input.setSelectionRange(wordStart + pick.length, wordStart + pick.length);
-    return;
-  }
-
-  // Build compgen command: -c for commands (first word), -f for files, -d for dirs
-  const cdPrefix = (termCwd && termCwd !== '~') ? `cd ${termCwd} 2>/dev/null; ` : '';
-  let compCmd;
-  if (isFirstWord) {
-    compCmd = `${cdPrefix}compgen -c -- '${word.replace(/'/g, "'\\''")}' 2>/dev/null | head -50`;
-  } else {
-    compCmd = `${cdPrefix}compgen -f -- '${word.replace(/'/g, "'\\''")}' 2>/dev/null | head -50`;
-  }
-
-  try {
-    const res = await fetch(`${API}/api/exec`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ command: compCmd, key: currentExecKey })
-    });
-    const data = await res.json();
-    if (data.error || !data.output || !data.output.trim()) return;
-
-    const candidates = data.output.trim().split('\n').filter(c => c);
-    if (candidates.length === 0) return;
-
-    if (candidates.length === 1) {
-      // Single match: complete it
-      let completion = candidates[0];
-      // Add trailing slash for directories, space for commands
-      if (isFirstWord) completion += ' ';
-      input.value = val.substring(0, wordStart) + completion + val.substring(pos);
-      input.setSelectionRange(wordStart + completion.length, wordStart + completion.length);
-      termCompleteCache = null;
-    } else {
-      // Multiple matches: find common prefix
-      let common = candidates[0];
-      for (let i = 1; i < candidates.length; i++) {
-        while (!candidates[i].startsWith(common)) {
-          common = common.substring(0, common.length - 1);
-        }
-      }
-      if (common.length > word.length) {
-        // Extend to common prefix
-        input.value = val.substring(0, wordStart) + common + val.substring(pos);
-        input.setSelectionRange(wordStart + common.length, wordStart + common.length);
-        termCompleteCache = { word: common, candidates, index: -1 };
-      } else {
-        // Show candidates in terminal output
-        const out = document.getElementById('termOutput');
-        const line = document.createElement('div');
-        line.className = 'term-line sys';
-        line.textContent = candidates.join('  ');
-        // Insert before the active input line
-        const activeLine = document.querySelector('.term-active-line');
-        if (activeLine) out.insertBefore(line, activeLine);
-        else out.appendChild(line);
-        out.scrollTop = out.scrollHeight;
-        termCompleteCache = { word, candidates, index: -1 };
-      }
-    }
-  } catch(e) {}
-}
-
-// Reset completion cache on any non-Tab input
-document.addEventListener('keydown', e => {
-  if (e.key !== 'Tab' && e.target.classList.contains('term-inline-input')) {
-    termCompleteCache = null;
-  }
-});
 
 // Drag to resize terminal
 (function() {
@@ -2740,10 +2457,20 @@ document.addEventListener('keydown', e => {
     panel.classList.remove('maximized');
     startY = e.clientY;
     startH = panel.offsetHeight;
-    const onMove = ev => { panel.style.height = Math.max(150, startH + (startY - ev.clientY)) + 'px'; };
-    const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); sendTermResize(); };
+    const onMove = ev => {
+      panel.style.height = Math.max(150, startH + (startY - ev.clientY)) + 'px';
+      if (xtermFit) xtermFit.fit();
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
+  });
+  // Also fit on window resize
+  window.addEventListener('resize', () => {
+    if (panel.classList.contains('open') && xtermFit) xtermFit.fit();
   });
 })();
 </script>
