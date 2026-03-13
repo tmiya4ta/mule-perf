@@ -17,13 +17,15 @@ var body = payload
 var testId = uuid()
 var url = body.targetUrl default "http://localhost:8888/api/health"
 var method = upper(body.method default "GET")
+var reqBody = body.body default null
+var reqBodyStr = if (reqBody != null) write(reqBody, "application/json") else null
 var concurrency = body.concurrency default 5
 var duration = body.duration default 30
 var warmup = body.warmup default 0
 var sl = body.stepLoad
 var javaId = if (sl != null and sl.enabled == true)
     java!mule_perf::LoadRunner::startStepLoad(
-        testId, url, method,
+        testId, url, method, reqBodyStr,
         sl.startConn default 1,
         sl.stepInc default 5,
         sl.maxConn default concurrency,
@@ -34,7 +36,7 @@ var javaId = if (sl != null and sl.enabled == true)
     )
   else
     java!mule_perf::LoadRunner::start(
-        testId, url, method, concurrency, duration, warmup
+        testId, url, method, reqBodyStr, concurrency, duration, warmup
     )
 ---
 {

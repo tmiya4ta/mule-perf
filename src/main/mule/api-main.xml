@@ -131,9 +131,10 @@ java!mule_perf::LoadRunner::exec(payload.command, payload.key)]]></ee:set-payloa
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 var cols = payload.cols default 120
-var x = java!mule_perf::LoadRunner::setTermColumns(cols)
+var rows = payload.rows default 24
+var x = java!mule_perf::LoadRunner::setTermSize(cols, rows)
 ---
-{ok: true, cols: cols}]]></ee:set-payload>
+{ok: true, cols: cols, rows: rows}]]></ee:set-payload>
                     </ee:message>
                 </ee:transform>
             </when>
