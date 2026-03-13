@@ -232,26 +232,62 @@ c=500: 636 RPS (CPU 39%)
 
 ## 4. 結論と提言
 
-### 4.1 DataWeave 中心のワークロード
+### 4.5 DataWeave 中心のワークロード
 
+**デフォルト設定の場合**:
 - 実効スレッド数は **2** で固定。vCore を増やしても CPU の大部分が遊ぶ
 - **推奨**: 小 vCore (0.1〜0.5) × 水平スケール
 - 0.1 vCore × 10 レプリカ (= 1 vCore 相当コスト) で **~8,000 RPS** 期待可能 vs 1 vCore × 1台 = 650 RPS
-- Concurrency は低めに (c≤50)。上げても RPS は伸びずレイテンシだけ悪化
 
-### 4.2 Echo/パススルー系のワークロード
+**UBER pool チューニング適用の場合**:
+- `<ee:scheduler-pools poolStrategy="UBER">` で corePoolSize を増やすことで 1 vCore でも **~1,800 RPS** (Small DW)
+- デフォルト比 **2.8倍** の改善。大きい vCore でも CPU を使い切れる
+- Concurrency は c=50 程度が最適。c=100+ で再劣化する場合がある
+
+### 4.6 Echo/パススルー系のワークロード
 
 - CPU パワーに比例してスケール
 - **推奨**: 用途に応じた vCore サイズ。高 RPS が必要なら大きい vCore
 - Concurrency は c=10〜50 が最適。c≥60 (1 vCore) で劣化が始まる
 
-### 4.3 過負荷耐性
+### 4.3 UBER プール チューニング検証
+
+デフォルトの UBER corePoolSize=2 (nproc依存) を 8 に変更し、同一環境 (1 vCore, 180s) で再測定:
+
+**設定方法**: `global-config.xml` に以下を追加:
+```xml
+<ee:scheduler-pools poolStrategy="UBER" gracefulShutdownTimeout="15000">
+    <ee:uber corePoolSize="8" maxPoolSize="8" queueSize="0" keepAlive="30000"/>
+</ee:scheduler-pools>
+```
+
+**結果**:
+
+| テスト | Conc | デフォルト RPS (CPU%) | **チューニング後 RPS (CPU%)** | **改善率** |
+|--------|------|---------------------|-------------------------------|-----------|
+| Echo | 50 | 2,061 (97%) | 2,061 (98%) | 0% (変化なし) |
+| Small DW | 50 | 638 (38%) | **1,438 (98%)** | **+125%** |
+| Small DW | 100 | 652 (41%) | **1,816 (98%)** | **+178%** |
+| Heavy DW | 50 | 152 (38%) | **388 (98%)** | **+155%** |
+| Heavy DW | 100 | 161 (41%) | 211 (43%) | +31% |
+
+**分析**:
+- Small DW は最大 **2.8倍** に向上。CPU が 38%→98% に上昇し、遊んでいた CPU を活用
+- Heavy DW c=50 も **2.6倍**。c=100 では CPU 43% に再劣化 → 高concurrency での劣化は別要因
+- Echo は変化なし → Echo は元々 UBER スレッド数の制約を受けていなかった
+- スレッド数: 57→68 (デフォルト比 +11)
+
+**結論**: UBER pool サイズがデフォルトで nproc=2 に基づき 2 に設定されるのが DataWeave 性能制約の主因。
+CloudHub 2 では nproc がホスト物理コア数を返すため、cgroup で割り当てた vCore 数と乖離する。
+`<ee:scheduler-pools>` で明示的にプールサイズを増やすことで、1 vCore 環境で DataWeave 処理を 2-3 倍に改善できる。
+
+### 4.7 過負荷耐性
 
 - Mule 4 は極端な過負荷でもほぼエラーを出さない (180秒 c=500 で err=0%)
 - レイテンシ増加でバックプレッシャーを吸収する設計
 - Heavy DW c=1000 で avg 6.6秒でもエラー率 0.7%
 
-### 4.4 性能テスト時の注意点
+### 4.8 性能テスト時の注意点
 
 1. **必ず 180秒以上の持続テスト**を行う。60秒テストはバースト性能を測っている
 2. **JVM ウォームアップ**を十分に取る（デプロイ直後は性能が不安定）
@@ -309,3 +345,4 @@ http.listener.0 (NIO/Netty)   = 4 スレッド
 | Trial 4 | 0.5 | 180s | `benchmark-results/trial4/` |
 | 閾値 0.5 | 0.5 | 60s | `benchmark-results/threshold-0.5/` |
 | 閾値 1 | 1 | 60s | `benchmark-results/threshold-1/` |
+| UBER tuned | 1 (pool=8) | 180s | `benchmark-results/tuned-uber8/` |
