@@ -486,6 +486,34 @@ c=500: 636 RPS (CPU 39%)
 
 > 最も負荷の高い UBER tuned Small DW c=100 (1,816 RPS) でも CPU 22%。mule-perf がボトルネックになる兆候はない。
 
+### 7.3 ロードジェネレータ精度検証 (hey とのクロスバリデーション)
+
+mule-perf の計測精度を [hey](https://github.com/rakyll/hey) (Go製) と比較検証。
+同一 Pod 上から同一ターゲット (bench-target 0.1 vCore, 内部URL) に対して同条件 (c=50, 60s) で実行。
+
+**mule-perf @ 1 vCore:**
+
+| テスト | hey RPS | mule-perf RPS | RPS差 | P50差 | P90差 | P99差 |
+|--------|---------|-------------|-------|-------|-------|-------|
+| Echo | 841 | 839 | **-0.3%** | +1ms | -1ms | -7ms |
+| Small DW | 723 | 701 | **-3%** | +1ms | 0ms | -4ms |
+| Heavy DW | 153 | 144 | **-6%** | +5ms | +4ms | +7ms |
+
+**mule-perf @ 0.1 vCore:**
+
+| テスト | hey RPS | mule-perf RPS | RPS差 | P50差 | P90差 | P99差 |
+|--------|---------|-------------|-------|-------|-------|-------|
+| Echo | 869 | 868 | **-0.2%** | +1ms | +1ms | -3ms |
+| Small DW | 741 | 713 | **-4%** | +2ms | +1ms | +2ms |
+| Heavy DW | 154 | 139 | **-10%** | +15ms | +82ms | +89ms |
+
+mule-perf 0.1 vCore のシステム負荷: CPU 10%, Heap 118/486 MB
+
+**結論:**
+- Echo/Small DW は **±4% 以内** で hey と一致（1 vCore でも 0.1 vCore でも）
+- Heavy DW は 0.1 vCore で最大 -10%。テール分布 (P90+) に GC/スケジューリングの影響あり
+- **mule-perf は 0.1 vCore でも信頼できるロードジェネレータ**。高精度が必要な場合は 1 vCore 推奨
+
 ---
 
 ## 8. データソース
