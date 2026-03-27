@@ -4,7 +4,7 @@
 
 	<groupId>mule_perf</groupId>
 	<artifactId>bench-target</artifactId>
-	<version>1.2.1</version>
+	<version>1.3.0</version>
 	<packaging>mule-application</packaging>
 
 	<name>bench-target</name>
@@ -32,7 +32,7 @@
 					<sharedLibraries>
 						<sharedLibrary>
 							<groupId>io.gitlab.myst3m</groupId>
-							<artifactId>hqlite-jdbc</artifactId>
+							<artifactId>clouderby-jdbc</artifactId>
 						</sharedLibrary>
 						<sharedLibrary>
 							<groupId>com.fasterxml.jackson.core</groupId>
@@ -74,7 +74,7 @@
 		</dependency>
 		<dependency>
 			<groupId>io.gitlab.myst3m</groupId>
-			<artifactId>hqlite-jdbc</artifactId>
+			<artifactId>clouderby-jdbc</artifactId>
 			<version>1.3.0</version>
 		</dependency>
 		<dependency>

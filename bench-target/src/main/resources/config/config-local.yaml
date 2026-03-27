@@ -5,9 +5,9 @@ scheduler:
   cpuIntensive:
     size: "2"
 
-hqlite:
-  host: "hqlite-mule-server-2m6ahj.pnwfdv.jpn-e1.cloudhub.io"
-  port: "443"
+clouderby:
+  host: "localhost"
+  port: "8081"
   user: "mule"
   password: "REDACTED"
 

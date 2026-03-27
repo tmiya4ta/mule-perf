@@ -118,12 +118,12 @@ var topItems = itemTotals pluck ((v, k) -> {item: k as String, total: v})
                 </ee:transform>
             </when>
 
-            <!-- ═══ TIER 2: HQLite DB ═══ -->
+            <!-- ═══ TIER 2: Clouderby (JDBC over HTTP) ═══ -->
 
-            <!-- T2-A: HQLite Single Product Lookup (JDBC) -->
-            <when expression="#[vars.method == 'GET' and (vars.path matches /\/api\/hqlite\/product\/P\d+$/)]">
-                <set-variable variableName="productId" value="#[vars.path replace /.*\/api\/hqlite\/product\// with '']" doc:name="Extract Product ID"/>
-                <db:select config-ref="hqlite-db-config" doc:name="Select Product">
+            <!-- T2-A: Clouderby Single Product Lookup -->
+            <when expression="#[vars.method == 'GET' and (vars.path matches /\/api\/clouderby\/product\/P\d+$/)]">
+                <set-variable variableName="productId" value="#[vars.path replace /.*\/api\/clouderby\/product\// with '']" doc:name="Extract Product ID"/>
+                <db:select config-ref="clouderby-db-config" doc:name="Select Product">
                     <db:sql>SELECT PRODUCT_ID, PRODUCT_CODE, PRODUCT_NAME, PRODUCT_TYPE, UNIT, UNIT_PRICE, IS_ACTIVE FROM MDM_PRODUCTS WHERE PRODUCT_ID = :pid</db:sql>
                     <db:input-parameters>#[{pid: vars.productId}]</db:input-parameters>
                 </db:select>
@@ -147,9 +147,9 @@ else {error: "not found"}]]></ee:set-payload>
                 </ee:transform>
             </when>
 
-            <!-- T2-B: HQLite Products List + Transform (JDBC) -->
-            <when expression="#[vars.method == 'GET' and vars.path == '/api/hqlite/products']">
-                <db:select config-ref="hqlite-db-config" doc:name="Select All Products">
+            <!-- T2-B: Clouderby Products List + Transform -->
+            <when expression="#[vars.method == 'GET' and vars.path == '/api/clouderby/products']">
+                <db:select config-ref="clouderby-db-config" doc:name="Select All Products">
                     <db:sql>SELECT PRODUCT_ID, PRODUCT_NAME, PRODUCT_TYPE, UNIT, UNIT_PRICE, IS_ACTIVE FROM MDM_PRODUCTS</db:sql>
                 </db:select>
                 <ee:transform doc:name="Aggregate">
@@ -177,21 +177,21 @@ var typeSummary = byType mapObject ((items, t) -> (t): {
                 </ee:transform>
             </when>
 
-            <!-- ═══ TIER 2 (legacy): Oracle DB I/O ═══ -->
+            <!-- ═══ TIER 3: Oracle DB ═══ -->
 
-            <!-- T2-Setup: Create tables and seed data -->
-            <when expression="#[vars.method == 'GET' and vars.path == '/api/db/setup']">
-                <flow-ref name="db-setup-flow" doc:name="DB Setup"/>
+            <!-- T3-Setup: Create tables and seed data -->
+            <when expression="#[vars.method == 'GET' and vars.path == '/api/oracle/setup']">
+                <flow-ref name="oracle-setup-flow" doc:name="Oracle Setup"/>
             </when>
 
-            <!-- T2-A: DB Select Single -->
-            <when expression="#[vars.method == 'GET' and (vars.path matches /\/api\/db\/user\/\d+$/)]">
-                <set-variable variableName="userId" value="#[vars.path replace /.*\/api\/db\/user\// with '']" doc:name="Extract ID"/>
+            <!-- T3-A: Oracle Single Row SELECT -->
+            <when expression="#[vars.method == 'GET' and (vars.path matches /\/api\/oracle\/user\/\d+$/)]">
+                <set-variable variableName="userId" value="#[vars.path replace /.*\/api\/oracle\/user\// with '']" doc:name="Extract ID"/>
                 <db:select config-ref="oracle-config" doc:name="Select User">
                     <db:sql>SELECT id, name, email, region, created_at FROM perf_users WHERE id = :id</db:sql>
                     <db:input-parameters>#[{id: vars.userId as Number}]</db:input-parameters>
                 </db:select>
-                <ee:transform doc:name="Format Response">
+                <ee:transform doc:name="Format">
                     <ee:message>
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -202,10 +202,10 @@ else {error: "not found"}]]></ee:set-payload>
                 </ee:transform>
             </when>
 
-            <!-- T2-B: DB Select + Transform -->
-            <when expression="#[vars.method == 'GET' and vars.path == '/api/db/users']">
+            <!-- T3-B: Oracle Multi-Row SELECT + DW Transform -->
+            <when expression="#[vars.method == 'GET' and vars.path == '/api/oracle/users']">
                 <set-variable variableName="region" value="#[attributes.queryParams.region default 'JP']" doc:name="Extract Region"/>
-                <db:select config-ref="oracle-config" doc:name="Select Users by Region">
+                <db:select config-ref="oracle-config" doc:name="Select Users">
                     <db:sql>SELECT id, name, email, region, created_at FROM perf_users WHERE region = :region</db:sql>
                     <db:input-parameters>#[{region: vars.region}]</db:input-parameters>
                 </db:select>
@@ -234,9 +234,9 @@ var domainCounts = byDomain mapObject ((items, domain) -> (domain): sizeOf(items
                 </ee:transform>
             </when>
 
-            <!-- T2-C: DB Write (INSERT + SELECT) -->
-            <when expression="#[vars.method == 'POST' and vars.path == '/api/db/order']">
-                <ee:transform doc:name="Parse Input">
+            <!-- T3-C: Oracle INSERT + SELECT -->
+            <when expression="#[vars.method == 'POST' and vars.path == '/api/oracle/order']">
+                <ee:transform doc:name="Parse">
                     <ee:message>
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/java
@@ -255,8 +255,8 @@ payload]]></ee:set-payload>
                         <db:auto-generated-keys-column-index value="1"/>
                     </db:auto-generated-keys-column-indexes>
                 </db:insert>
-                <set-variable variableName="generatedId" value="#[payload[0].ROWID]" doc:name="Get Generated ID"/>
-                <db:select config-ref="oracle-config" doc:name="Select Created Order">
+                <set-variable variableName="generatedId" value="#[payload[0].ROWID]" doc:name="Get ID"/>
+                <db:select config-ref="oracle-config" doc:name="Select Created">
                     <db:sql>SELECT id, item, qty, price, created_at FROM perf_orders WHERE ROWID = :rid</db:sql>
                     <db:input-parameters>#[{rid: vars.generatedId}]</db:input-parameters>
                 </db:select>
@@ -269,6 +269,7 @@ payload[0] default {ok: true}]]></ee:set-payload>
                     </ee:message>
                 </ee:transform>
             </when>
+
 
             <!-- Default: 404 -->
             <otherwise>
@@ -287,7 +288,7 @@ output application/json
     </flow>
 
     <!-- ═══ DB Setup Flow ═══ -->
-    <flow name="db-setup-flow">
+    <flow name="oracle-setup-flow">
         <try doc:name="Create perf_users">
             <db:execute-ddl config-ref="oracle-config" doc:name="Create perf_users">
                 <db:sql><![CDATA[CREATE TABLE perf_users (

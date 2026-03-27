@@ -18,14 +18,10 @@
         <ee:uber corePoolSize="8" maxPoolSize="8" queueSize="0" keepAlive="30000"/>
     </ee:scheduler-pools>
 
-    <http:request-config name="hqlite-request-config" doc:name="HQLite Request Config">
-        <http:request-connection host="${hqlite.host}" port="${hqlite.port}" protocol="HTTPS"/>
-    </http:request-config>
-
-    <db:config name="hqlite-db-config" doc:name="HQLite JDBC Config">
-        <db:generic-connection url="jdbc:hqlite://${hqlite.host}:${hqlite.port}/default?secure=true"
-                               user="${hqlite.user}" password="${hqlite.password}"
-                               driverClassName="com.hqlite.jdbc.HqliteDriver">
+    <db:config name="clouderby-db-config" doc:name="Clouderby JDBC Config">
+        <db:generic-connection url="jdbc:clouderby://${clouderby.host}:${clouderby.port}/default?secure=true"
+                               user="${clouderby.user}" password="${clouderby.password}"
+                               driverClassName="io.gitlab.myst3m.clouderby.jdbc.ClouderbyDriver">
             <db:pooling-profile maxPoolSize="10" minPoolSize="2"/>
         </db:generic-connection>
     </db:config>
