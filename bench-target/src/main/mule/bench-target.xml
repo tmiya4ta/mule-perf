@@ -345,9 +345,8 @@ output application/java
 output application/json
 ---
 {
-  success: payload[0].successful,
-  id: payload[0].id,
-  created: payload[0].created
+  success: payload[0].successful default payload[0].success,
+  id: payload[0].id default payload[0].Id
 }]]></ee:set-payload>
                     </ee:message>
                 </ee:transform>
