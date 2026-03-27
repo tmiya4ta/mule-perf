@@ -9,7 +9,7 @@ clouderby:
   host: "hqlite-mule-server-2m6ahj.pnwfdv.jpn-e1.cloudhub.io"
   port: "443"
   user: "mule"
-  password: "${clouderby.password}"
+  password: "${secure.clouderby.password}"
 
 sf:
   host: "trailsignup-1c3ba81ec14b1c.my.salesforce.com"
@@ -18,8 +18,8 @@ sf:
   clientSecret: "${sf.clientSecret}"
 
 oracle:
-  host: "cloud-services.demos.mulesoft.com"
-  port: "32627"
+  host: "192.168.11.6"
+  port: "11521"
   user: "mule"
-  password: "${oracle.password}"
-  serviceId: "muledb"
+  password: "${secure.oracle.password}"
+  serviceId: "FREEPDB1"

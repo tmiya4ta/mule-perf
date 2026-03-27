@@ -216,20 +216,20 @@ else {error: "not found"}]]></ee:set-payload>
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 var users = payload
-var byDomain = users groupBy ((u) -> (u.email default "" splitBy "@")[1] default "unknown")
+var byDomain = users groupBy ((u) -> (u.EMAIL default "" splitBy "@")[1] default "unknown")
 var domainCounts = byDomain mapObject ((items, domain) -> (domain): sizeOf(items))
 ---
 {
   count: sizeOf(users),
   region: vars.region,
   emailDomains: domainCounts,
-  newest: if (sizeOf(users) > 0) (users orderBy -$.created_at)[0].name else null,
-  oldest: if (sizeOf(users) > 0) (users orderBy $.created_at)[0].name else null,
+  newest: if (sizeOf(users) > 0) (users orderBy $.NAME)[-1].NAME else null,
+  oldest: if (sizeOf(users) > 0) (users orderBy $.NAME)[0].NAME else null,
   users: users map {
-    id: $.id,
-    name: $.name,
-    email: $.email,
-    daysSinceCreated: (now() - ($.created_at as DateTime)) as Number {unit: "days"}
+    id: $.ID,
+    name: $.NAME,
+    email: $.EMAIL,
+    region: $.REGION
   }
 }]]></ee:set-payload>
                     </ee:message>
@@ -410,13 +410,9 @@ output application/json
             <when expression="#[payload[0].CNT == 0]">
                 <!-- Bulk seed using PL/SQL block -->
                 <db:execute-script config-ref="oracle-config" doc:name="Seed Data">
-                    <db:sql><![CDATA[BEGIN
-  FOR i IN 1..50 LOOP
-    INSERT INTO perf_users (name, email, region) VALUES ('User_JP_' || i, 'user' || i || '@example.jp', 'JP');
-    INSERT INTO perf_users (name, email, region) VALUES ('User_US_' || i, 'user' || i || '@example.com', 'US');
-    INSERT INTO perf_users (name, email, region) VALUES ('User_EU_' || i, 'user' || i || '@example.eu', 'EU');
-  END LOOP;
-END;]]></db:sql>
+                    <db:sql><![CDATA[INSERT INTO perf_users (name, email, region) SELECT 'User_JP_' || LEVEL, 'user' || LEVEL || '@example.jp', 'JP' FROM DUAL CONNECT BY LEVEL <= 50;
+INSERT INTO perf_users (name, email, region) SELECT 'User_US_' || LEVEL, 'user' || LEVEL || '@example.com', 'US' FROM DUAL CONNECT BY LEVEL <= 50;
+INSERT INTO perf_users (name, email, region) SELECT 'User_EU_' || LEVEL, 'user' || LEVEL || '@example.eu', 'EU' FROM DUAL CONNECT BY LEVEL <= 50]]></db:sql>
                 </db:execute-script>
                 <ee:transform doc:name="Seeded">
                     <ee:message>
