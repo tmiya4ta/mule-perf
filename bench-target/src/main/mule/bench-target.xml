@@ -2,6 +2,7 @@
 <mule xmlns="http://www.mulesoft.org/schema/mule/core"
       xmlns:http="http://www.mulesoft.org/schema/mule/http"
       xmlns:db="http://www.mulesoft.org/schema/mule/db"
+      xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
       xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
       xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -9,6 +10,7 @@
         http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
         http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
         http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+        http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
         http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
 
     <http:listener-config name="http-listener-config" doc:name="HTTP Listener Config">
@@ -270,6 +272,86 @@ payload[0] default {ok: true}]]></ee:set-payload>
                 </ee:transform>
             </when>
 
+
+            <!-- ═══ TIER 4: Salesforce ═══ -->
+
+            <!-- T4-A: Salesforce Account Query (single) -->
+            <when expression="#[vars.method == 'GET' and vars.path == '/api/sf/account']">
+                <set-variable variableName="accountName" value="#[attributes.queryParams.name default 'GenePoint']" doc:name="Account Name"/>
+                <salesforce:query config-ref="sf-config" doc:name="Query Account">
+                    <salesforce:salesforce-query>SELECT Id, Name, Industry, Type, BillingCity, BillingCountry, NumberOfEmployees, AnnualRevenue FROM Account WHERE Name = ':name' LIMIT 1</salesforce:salesforce-query>
+                    <salesforce:parameters><![CDATA[#[output application/java --- {name: vars.accountName}]]]></salesforce:parameters>
+                </salesforce:query>
+                <ee:transform doc:name="Format">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+if (sizeOf(payload) > 0) payload[0]
+else {error: "not found", name: vars.accountName}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- T4-B: Salesforce Accounts List + DW Transform -->
+            <when expression="#[vars.method == 'GET' and vars.path == '/api/sf/accounts']">
+                <salesforce:query config-ref="sf-config" doc:name="Query Accounts">
+                    <salesforce:salesforce-query>SELECT Id, Name, Industry, Type, BillingCity, BillingCountry, NumberOfEmployees, AnnualRevenue FROM Account ORDER BY Name LIMIT 100</salesforce:salesforce-query>
+                </salesforce:query>
+                <ee:transform doc:name="Aggregate">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var accounts = payload map ((a) -> {
+  id: a.Id, name: a.Name, industry: a.Industry,
+  accountType: a."Type", city: a.BillingCity, country: a.BillingCountry,
+  employees: a.NumberOfEmployees, revenue: a.AnnualRevenue
+})
+var byIndustry = accounts groupBy ($.industry default "Unknown")
+var industrySummary = byIndustry mapObject ((items, ind) -> (ind): {
+  count: sizeOf(items),
+  totalEmployees: items reduce ((a, acc=0) -> acc + (a.employees default 0)),
+  totalRevenue: items reduce ((a, acc=0) -> acc + (a.revenue default 0))
+})
+---
+{
+  totalAccounts: sizeOf(accounts),
+  byIndustry: industrySummary,
+  accounts: accounts
+}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- T4-C: Salesforce Contact Create -->
+            <when expression="#[vars.method == 'POST' and vars.path == '/api/sf/contact']">
+                <ee:transform doc:name="Build Record">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+[{
+  FirstName: payload.firstName default "Perf",
+  LastName: payload.lastName default ("Test_" ++ uuid()),
+  Email: payload.email default ("perf_" ++ uuid() ++ "@test.example.com"),
+  Title: payload.title default "Benchmark Contact"
+}]]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+                <salesforce:create config-ref="sf-config" type="Contact" doc:name="Create Contact"/>
+                <ee:transform doc:name="Format">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  success: payload[0].successful,
+  id: payload[0].id,
+  created: payload[0].created
+}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
 
             <!-- Default: 404 -->
             <otherwise>

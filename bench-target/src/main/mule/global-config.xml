@@ -3,13 +3,15 @@
       xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
       xmlns:http="http://www.mulesoft.org/schema/mule/http"
       xmlns:db="http://www.mulesoft.org/schema/mule/db"
+      xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
       xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="
         http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
         http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
         http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-        http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+        http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+        http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
 
     <global-property doc:name="mule.env" name="mule.env" value="local"/>
     <configuration-properties file="config/config-${mule.env}.yaml" doc:name="Configuration Properties"/>
@@ -25,6 +27,13 @@
             <db:pooling-profile maxPoolSize="10" minPoolSize="2"/>
         </db:generic-connection>
     </db:config>
+
+    <salesforce:sfdc-config name="sf-config" doc:name="Salesforce Config">
+        <salesforce:oauth-client-credentials-connection>
+            <salesforce:oauth-client-credentials clientId="${sf.clientId}" clientSecret="${sf.clientSecret}"
+                tokenUrl="https://${sf.host}/services/oauth2/token"/>
+        </salesforce:oauth-client-credentials-connection>
+    </salesforce:sfdc-config>
 
     <db:config name="oracle-config" doc:name="Oracle Database Config">
         <db:oracle-connection host="${oracle.host}" port="${oracle.port}"

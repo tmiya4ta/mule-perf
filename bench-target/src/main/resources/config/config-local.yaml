@@ -11,6 +11,11 @@ clouderby:
   user: "mule"
   password: "${CLOUDERBY_PASSWORD}"
 
+sf:
+  host: "trailsignup-1c3ba81ec14b1c.my.salesforce.com"
+  clientId: "${SF_CLIENT_ID}"
+  clientSecret: "${SF_CLIENT_SECRET}"
+
 oracle:
   host: "cloud-services.demos.mulesoft.com"
   port: "32627"
