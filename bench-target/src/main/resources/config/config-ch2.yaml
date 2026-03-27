@@ -13,6 +13,7 @@ clouderby:
 
 sf:
   host: "trailsignup-1c3ba81ec14b1c.my.salesforce.com"
+  tokenUrl: "https://${sf.host}/services/oauth2/token"
   clientId: "${SF_CLIENT_ID}"
   clientSecret: "${SF_CLIENT_SECRET}"
 

@@ -2,6 +2,7 @@
 <mule xmlns="http://www.mulesoft.org/schema/mule/core"
       xmlns:http="http://www.mulesoft.org/schema/mule/http"
       xmlns:db="http://www.mulesoft.org/schema/mule/db"
+      xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
       xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
       xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -9,6 +10,7 @@
         http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
         http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
         http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+        http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
         http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
 
     <http:listener-config name="http-listener-config" doc:name="HTTP Listener Config">
@@ -271,23 +273,21 @@ payload[0] default {ok: true}]]></ee:set-payload>
             </when>
 
 
-            <!-- ═══ TIER 4: Salesforce (HTTP REST API) ═══ -->
+            <!-- ═══ TIER 4: Salesforce (Connector) ═══ -->
 
             <!-- T4-A: Salesforce Account Query (single) -->
             <when expression="#[vars.method == 'GET' and vars.path == '/api/sf/account']">
                 <set-variable variableName="accountName" value="#[attributes.queryParams.name default 'GenePoint']" doc:name="Account Name"/>
-                <flow-ref name="sf-token-flow" doc:name="Get SF Token"/>
-                <http:request config-ref="sf-api-config" method="GET" path="/services/data/v62.0/query" doc:name="SOQL Query">
-                    <http:headers><![CDATA[#[{"Authorization": "Bearer " ++ vars.sfToken}]]]></http:headers>
-                    <http:query-params><![CDATA[#[{"q": "SELECT Id, Name, Industry, Type, BillingCity, BillingCountry, NumberOfEmployees, AnnualRevenue FROM Account WHERE Name = '" ++ vars.accountName ++ "' LIMIT 1"}]]]></http:query-params>
-                </http:request>
+                <salesforce:query config-ref="sf-config" doc:name="Query Account">
+                    <salesforce:salesforce-query>SELECT Id, Name, Industry, Type, BillingCity, BillingCountry, NumberOfEmployees, AnnualRevenue FROM Account WHERE Name = ':name' LIMIT 1</salesforce:salesforce-query>
+                    <salesforce:parameters><![CDATA[#[output application/java --- {name: vars.accountName}]]]></salesforce:parameters>
+                </salesforce:query>
                 <ee:transform doc:name="Format">
                     <ee:message>
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
-var records = payload.records default []
 ---
-if (sizeOf(records) > 0) records[0]
+if (sizeOf(payload) > 0) payload[0]
 else {error: "not found", name: vars.accountName}]]></ee:set-payload>
                     </ee:message>
                 </ee:transform>
@@ -295,16 +295,14 @@ else {error: "not found", name: vars.accountName}]]></ee:set-payload>
 
             <!-- T4-B: Salesforce Accounts List + DW Transform -->
             <when expression="#[vars.method == 'GET' and vars.path == '/api/sf/accounts']">
-                <flow-ref name="sf-token-flow" doc:name="Get SF Token"/>
-                <http:request config-ref="sf-api-config" method="GET" path="/services/data/v62.0/query" doc:name="SOQL Query">
-                    <http:headers><![CDATA[#[{"Authorization": "Bearer " ++ vars.sfToken}]]]></http:headers>
-                    <http:query-params><![CDATA[#[{"q": "SELECT Id, Name, Industry, Type, BillingCity, BillingCountry, NumberOfEmployees, AnnualRevenue FROM Account ORDER BY Name LIMIT 100"}]]]></http:query-params>
-                </http:request>
+                <salesforce:query config-ref="sf-config" doc:name="Query Accounts">
+                    <salesforce:salesforce-query>SELECT Id, Name, Industry, Type, BillingCity, BillingCountry, NumberOfEmployees, AnnualRevenue FROM Account ORDER BY Name LIMIT 100</salesforce:salesforce-query>
+                </salesforce:query>
                 <ee:transform doc:name="Aggregate">
                     <ee:message>
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
-var accounts = (payload.records default []) map ((a) -> {
+var accounts = payload map ((a) -> {
   id: a.Id, name: a.Name, industry: a.Industry,
   accountType: a."Type", city: a.BillingCity, country: a.BillingCountry,
   employees: a.NumberOfEmployees, revenue: a.AnnualRevenue
@@ -327,31 +325,29 @@ var industrySummary = byIndustry mapObject ((items, ind) -> (ind): {
 
             <!-- T4-C: Salesforce Contact Create -->
             <when expression="#[vars.method == 'POST' and vars.path == '/api/sf/contact']">
-                <flow-ref name="sf-token-flow" doc:name="Get SF Token"/>
                 <ee:transform doc:name="Build Record">
                     <ee:message>
                         <ee:set-payload><![CDATA[%dw 2.0
-output application/json
+output application/java
 ---
-{
+[{
   FirstName: payload.firstName default "Perf",
   LastName: payload.lastName default ("Test_" ++ uuid()),
   Email: payload.email default ("perf_" ++ uuid() ++ "@test.example.com"),
   Title: payload.title default "Benchmark Contact"
-}]]></ee:set-payload>
+}]]]></ee:set-payload>
                     </ee:message>
                 </ee:transform>
-                <http:request config-ref="sf-api-config" method="POST" path="/services/data/v62.0/sobjects/Contact" doc:name="Create Contact">
-                    <http:headers><![CDATA[#[{"Authorization": "Bearer " ++ vars.sfToken, "Content-Type": "application/json"}]]]></http:headers>
-                </http:request>
+                <salesforce:create config-ref="sf-config" type="Contact" doc:name="Create Contact"/>
                 <ee:transform doc:name="Format">
                     <ee:message>
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
-  success: payload.success,
-  id: payload.id
+  success: payload[0].successful,
+  id: payload[0].id,
+  created: payload[0].created
 }]]></ee:set-payload>
                     </ee:message>
                 </ee:transform>
@@ -372,15 +368,6 @@ output application/json
 
         </choice>
     </flow>
-
-    <!-- ═══ Salesforce Token Flow ═══ -->
-    <sub-flow name="sf-token-flow" doc:name="SF Token">
-        <http:request config-ref="sf-api-config" method="POST" path="/services/oauth2/token" doc:name="Get Token">
-            <http:body><![CDATA[#[output application/x-www-form-urlencoded --- {grant_type: "client_credentials", client_id: p('sf.clientId'), client_secret: p('sf.clientSecret')}]]]></http:body>
-            <http:headers><![CDATA[#[{"Content-Type": "application/x-www-form-urlencoded"}]]]></http:headers>
-        </http:request>
-        <set-variable variableName="sfToken" value="#[payload.access_token]" doc:name="Store Token"/>
-    </sub-flow>
 
     <!-- ═══ DB Setup Flow ═══ -->
     <flow name="oracle-setup-flow">
