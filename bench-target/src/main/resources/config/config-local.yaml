@@ -9,12 +9,12 @@ clouderby:
   host: "localhost"
   port: "8081"
   user: "mule"
-  password: "REDACTED"
+  password: "${CLOUDERBY_PASSWORD}"
 
 oracle:
   host: "cloud-services.demos.mulesoft.com"
   port: "32627"
   user: "mule"
-  password: "REDACTED"
+  password: "${ORACLE_PASSWORD}"
   serviceId: "muledb"
 

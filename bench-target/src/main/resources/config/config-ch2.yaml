@@ -9,11 +9,11 @@ clouderby:
   host: "hqlite-mule-server-2m6ahj.pnwfdv.jpn-e1.cloudhub.io"
   port: "443"
   user: "mule"
-  password: "REDACTED"
+  password: "${CLOUDERBY_PASSWORD}"
 
 oracle:
   host: "cloud-services.demos.mulesoft.com"
   port: "32627"
   user: "mule"
-  password: "REDACTED"
+  password: "${ORACLE_PASSWORD}"
   serviceId: "muledb"
