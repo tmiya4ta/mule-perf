@@ -10,6 +10,7 @@ import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.*;
 
 /**
@@ -208,6 +209,9 @@ public class LoadRunner {
         final AtomicLong hist500_1s = new AtomicLong();
         final AtomicLong hist1s = new AtomicLong();
 
+        // Raw latency recording for precise percentiles
+        final ConcurrentLinkedQueue<Long> rawLatencies = new ConcurrentLinkedQueue<>();
+
         // Per-second time series
         final ConcurrentHashMap<Long, long[]> timeSeries = new ConcurrentHashMap<>();
 
@@ -260,6 +264,9 @@ public class LoadRunner {
                 }
                 statusDetail.computeIfAbsent(detailKey, k -> new AtomicLong()).incrementAndGet();
             }
+
+            // Record raw latency for precise percentiles
+            rawLatencies.add(elapsedMs);
 
             // Histogram
             if (elapsedMs < 50) hist0_50.incrementAndGet();
@@ -690,10 +697,16 @@ public class LoadRunner {
         if (s.s5xx.get() > 0) statusCodeMap.put("5xx", s.s5xx.get());
         if (s.sErr.get() > 0) statusCodeMap.put("err", s.sErr.get());
 
-        // Histogram-based percentile estimation
+        // Histogram counts (for histogram display)
         long[] hist = {s.hist0_50.get(), s.hist50_100.get(), s.hist100_200.get(),
                        s.hist200_500.get(), s.hist500_1s.get(), s.hist1s.get()};
-        long[] bucketMid = {25, 75, 150, 350, 750, 1500};
+
+        // Precise percentiles from raw latencies
+        long[] latArr = s.rawLatencies.stream().mapToLong(Long::longValue).sorted().toArray();
+        long preciseP50 = latArr.length > 0 ? latArr[(int)(latArr.length * 0.50)] : 0;
+        long preciseP90 = latArr.length > 0 ? latArr[(int)(latArr.length * 0.90)] : 0;
+        long preciseP95 = latArr.length > 0 ? latArr[Math.min((int)(latArr.length * 0.95), latArr.length - 1)] : 0;
+        long preciseP99 = latArr.length > 0 ? latArr[Math.min((int)(latArr.length * 0.99), latArr.length - 1)] : 0;
 
         // Time series (keep last 600 entries = 10 min, prune old)
         TreeMap<Long, long[]> sorted = new TreeMap<>(s.timeSeries);
@@ -757,9 +770,10 @@ public class LoadRunner {
         rt.put("avg", totalReqs > 0 ? (double) s.totalRt.get() / totalReqs : 0);
         rt.put("min", totalReqs > 0 ? s.minRt.get() : 0);
         rt.put("max", s.maxRt.get());
-        rt.put("p50", pctFromHist(hist, bucketMid, totalReqs, 0.50));
-        rt.put("p95", pctFromHist(hist, bucketMid, totalReqs, 0.95));
-        rt.put("p99", pctFromHist(hist, bucketMid, totalReqs, 0.99));
+        rt.put("p50", preciseP50);
+        rt.put("p90", preciseP90);
+        rt.put("p95", preciseP95);
+        rt.put("p99", preciseP99);
         result.put("responseTime", rt);
 
         Map<String, Object> throughput = new LinkedHashMap<>();
