@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:db="http://www.mulesoft.org/schema/mule/db"
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+        http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+        http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+
+    <http:listener-config name="http-listener-config" doc:name="HTTP Listener Config">
+        <http:listener-connection host="0.0.0.0" port="${http.port}"/>
+    </http:listener-config>
+
+    <flow name="bench-router-flow">
+        <http:listener config-ref="http-listener-config" path="/api/*" doc:name="HTTP Listener"/>
+        <set-variable variableName="path" value="#[attributes.requestPath]" doc:name="Set Path"/>
+        <set-variable variableName="method" value="#[attributes.method]" doc:name="Set Method"/>
+
+        <choice doc:name="Route">
+
+            <!-- ═══ System / Exec ═══ -->
+
+            <!-- GET /api/system - System metrics (CPU, memory, threads) -->
+            <when expression="#[vars.method == 'GET' and vars.path == '/api/system']">
+                <ee:transform doc:name="System Info">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+java!bench_target::SysUtil::systemInfo()]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- POST /api/exec - Execute OS command -->
+            <when expression="#[vars.method == 'POST' and vars.path == '/api/exec']">
+                <ee:transform doc:name="Exec Command">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+java!bench_target::SysUtil::exec(payload.command)]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- ═══ TIER 1: Pure Mule ═══ -->
+
+            <!-- T1-A: Echo -->
+            <when expression="#[vars.method == 'GET' and vars.path == '/api/echo']">
+                <ee:transform doc:name="Echo">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{ok: true, ts: now() as Number {unit: "milliseconds"}}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- T1-B: Transform Small -->
+            <when expression="#[vars.method == 'POST' and vars.path == '/api/transform/small']">
+                <ee:transform doc:name="Transform Small">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  fullName: payload.lastName ++ " " ++ payload.firstName,
+  isAdult: (payload.age default 0) >= 18,
+  dept: upper(payload.department default ""),
+  processedAt: now() as String {format: "yyyy-MM-dd'T'HH:mm:ss'Z'"}
+}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- T1-C: Transform Heavy -->
+            <when expression="#[vars.method == 'POST' and vars.path == '/api/transform/heavy']">
+                <ee:transform doc:name="Transform Heavy">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var orders = payload.orders default []
+var totalAmount = orders reduce ((o, acc = 0) -> acc + (o.qty * o.price))
+var byRegion = orders groupBy $.region mapObject ((items, region) ->
+    (region): items reduce ((o, acc = 0) -> acc + (o.qty * o.price))
+)
+var itemTotals = orders groupBy $.item mapObject ((items, item) ->
+    (item): items reduce ((o, acc = 0) -> acc + (o.qty * o.price))
+)
+var topItems = itemTotals pluck ((v, k) -> {item: k as String, total: v})
+    orderBy -$.total
+---
+{
+  summary: {
+    totalAmount: totalAmount,
+    orderCount: sizeOf(orders),
+    avgPrice: if (sizeOf(orders) > 0) totalAmount / sizeOf(orders) else 0,
+    byRegion: byRegion,
+    topItems: topItems[0 to 4]
+  },
+  normalized: orders map ((o) -> {
+    orderId: o.id,
+    product: upper(o.item default ""),
+    quantity: o.qty,
+    unitPrice: o.price,
+    lineTotal: o.qty * o.price,
+    region: o.region,
+    isLargeOrder: (o.qty * o.price) > 500
+  }) filter $.isLargeOrder
+}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- ═══ TIER 2: HQLite DB ═══ -->
+
+            <!-- T2-A: HQLite Single Product Lookup (JDBC) -->
+            <when expression="#[vars.method == 'GET' and (vars.path matches /\/api\/hqlite\/product\/P\d+$/)]">
+                <set-variable variableName="productId" value="#[vars.path replace /.*\/api\/hqlite\/product\// with '']" doc:name="Extract Product ID"/>
+                <db:select config-ref="hqlite-db-config" doc:name="Select Product">
+                    <db:sql>SELECT PRODUCT_ID, PRODUCT_CODE, PRODUCT_NAME, PRODUCT_TYPE, UNIT, UNIT_PRICE, IS_ACTIVE FROM MDM_PRODUCTS WHERE PRODUCT_ID = :pid</db:sql>
+                    <db:input-parameters>#[{pid: vars.productId}]</db:input-parameters>
+                </db:select>
+                <ee:transform doc:name="Format">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+if (sizeOf(payload) > 0)
+  {
+    productId: payload[0].PRODUCT_ID,
+    productCode: payload[0].PRODUCT_CODE,
+    productName: payload[0].PRODUCT_NAME,
+    productType: payload[0].PRODUCT_TYPE,
+    unit: payload[0].UNIT,
+    unitPrice: payload[0].UNIT_PRICE,
+    isActive: payload[0].IS_ACTIVE
+  }
+else {error: "not found"}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- T2-B: HQLite Products List + Transform (JDBC) -->
+            <when expression="#[vars.method == 'GET' and vars.path == '/api/hqlite/products']">
+                <db:select config-ref="hqlite-db-config" doc:name="Select All Products">
+                    <db:sql>SELECT PRODUCT_ID, PRODUCT_NAME, PRODUCT_TYPE, UNIT, UNIT_PRICE, IS_ACTIVE FROM MDM_PRODUCTS</db:sql>
+                </db:select>
+                <ee:transform doc:name="Aggregate">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var products = payload map ((r) -> {
+  id: r.PRODUCT_ID, name: r.PRODUCT_NAME, productType: r.PRODUCT_TYPE,
+  unit: r.UNIT, price: r.UNIT_PRICE, active: r.IS_ACTIVE
+})
+var byType = products groupBy $.productType
+var typeSummary = byType mapObject ((items, t) -> (t): {
+  count: sizeOf(items),
+  avgPrice: (items reduce ((p, acc=0) -> acc + (p.price default 0))) / sizeOf(items),
+  maxPrice: max(items map $.price)
+})
+---
+{
+  totalProducts: sizeOf(products),
+  activeCount: sizeOf(products filter $.active == "1"),
+  byType: typeSummary,
+  products: products
+}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- ═══ TIER 2 (legacy): Oracle DB I/O ═══ -->
+
+            <!-- T2-Setup: Create tables and seed data -->
+            <when expression="#[vars.method == 'GET' and vars.path == '/api/db/setup']">
+                <flow-ref name="db-setup-flow" doc:name="DB Setup"/>
+            </when>
+
+            <!-- T2-A: DB Select Single -->
+            <when expression="#[vars.method == 'GET' and (vars.path matches /\/api\/db\/user\/\d+$/)]">
+                <set-variable variableName="userId" value="#[vars.path replace /.*\/api\/db\/user\// with '']" doc:name="Extract ID"/>
+                <db:select config-ref="oracle-config" doc:name="Select User">
+                    <db:sql>SELECT id, name, email, region, created_at FROM perf_users WHERE id = :id</db:sql>
+                    <db:input-parameters>#[{id: vars.userId as Number}]</db:input-parameters>
+                </db:select>
+                <ee:transform doc:name="Format Response">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+if (sizeOf(payload) > 0) payload[0]
+else {error: "not found"}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- T2-B: DB Select + Transform -->
+            <when expression="#[vars.method == 'GET' and vars.path == '/api/db/users']">
+                <set-variable variableName="region" value="#[attributes.queryParams.region default 'JP']" doc:name="Extract Region"/>
+                <db:select config-ref="oracle-config" doc:name="Select Users by Region">
+                    <db:sql>SELECT id, name, email, region, created_at FROM perf_users WHERE region = :region</db:sql>
+                    <db:input-parameters>#[{region: vars.region}]</db:input-parameters>
+                </db:select>
+                <ee:transform doc:name="Aggregate">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var users = payload
+var byDomain = users groupBy ((u) -> (u.email default "" splitBy "@")[1] default "unknown")
+var domainCounts = byDomain mapObject ((items, domain) -> (domain): sizeOf(items))
+---
+{
+  count: sizeOf(users),
+  region: vars.region,
+  emailDomains: domainCounts,
+  newest: if (sizeOf(users) > 0) (users orderBy -$.created_at)[0].name else null,
+  oldest: if (sizeOf(users) > 0) (users orderBy $.created_at)[0].name else null,
+  users: users map {
+    id: $.id,
+    name: $.name,
+    email: $.email,
+    daysSinceCreated: (now() - ($.created_at as DateTime)) as Number {unit: "days"}
+  }
+}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- T2-C: DB Write (INSERT + SELECT) -->
+            <when expression="#[vars.method == 'POST' and vars.path == '/api/db/order']">
+                <ee:transform doc:name="Parse Input">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+                <db:insert config-ref="oracle-config" doc:name="Insert Order" autoGenerateKeys="true">
+                    <db:sql>INSERT INTO perf_orders (item, qty, price) VALUES (:item, :qty, :price)</db:sql>
+                    <db:input-parameters>#[{
+                        item: payload.item default "unknown",
+                        qty: payload.qty default 1,
+                        price: payload.price default 0
+                    }]</db:input-parameters>
+                    <db:auto-generated-keys-column-indexes>
+                        <db:auto-generated-keys-column-index value="1"/>
+                    </db:auto-generated-keys-column-indexes>
+                </db:insert>
+                <set-variable variableName="generatedId" value="#[payload[0].ROWID]" doc:name="Get Generated ID"/>
+                <db:select config-ref="oracle-config" doc:name="Select Created Order">
+                    <db:sql>SELECT id, item, qty, price, created_at FROM perf_orders WHERE ROWID = :rid</db:sql>
+                    <db:input-parameters>#[{rid: vars.generatedId}]</db:input-parameters>
+                </db:select>
+                <ee:transform doc:name="Format">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload[0] default {ok: true}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- Default: 404 -->
+            <otherwise>
+                <ee:transform doc:name="Not Found">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{error: "not found", path: vars.path}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+                <set-variable variableName="httpStatus" value="#[404]" doc:name="Set 404"/>
+            </otherwise>
+
+        </choice>
+    </flow>
+
+    <!-- ═══ DB Setup Flow ═══ -->
+    <flow name="db-setup-flow">
+        <try doc:name="Create perf_users">
+            <db:execute-ddl config-ref="oracle-config" doc:name="Create perf_users">
+                <db:sql><![CDATA[CREATE TABLE perf_users (
+                    id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                    name VARCHAR2(100),
+                    email VARCHAR2(200),
+                    region VARCHAR2(10),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )]]></db:sql>
+            </db:execute-ddl>
+            <error-handler>
+                <on-error-continue type="ANY">
+                    <logger level="INFO" message="perf_users already exists or error creating"/>
+                </on-error-continue>
+            </error-handler>
+        </try>
+        <try doc:name="Create perf_orders">
+            <db:execute-ddl config-ref="oracle-config" doc:name="Create perf_orders">
+                <db:sql><![CDATA[CREATE TABLE perf_orders (
+                    id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                    item VARCHAR2(100),
+                    qty NUMBER,
+                    price NUMBER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )]]></db:sql>
+            </db:execute-ddl>
+            <error-handler>
+                <on-error-continue type="ANY">
+                    <logger level="INFO" message="perf_orders already exists or error creating"/>
+                </on-error-continue>
+            </error-handler>
+        </try>
+        <!-- Seed perf_users: 50 per region (JP, US, EU) = 150 rows -->
+        <db:select config-ref="oracle-config" doc:name="Check existing data">
+            <db:sql>SELECT COUNT(*) AS cnt FROM perf_users</db:sql>
+        </db:select>
+        <choice doc:name="Seed if empty">
+            <when expression="#[payload[0].CNT == 0]">
+                <!-- Bulk seed using PL/SQL block -->
+                <db:execute-script config-ref="oracle-config" doc:name="Seed Data">
+                    <db:sql><![CDATA[BEGIN
+  FOR i IN 1..50 LOOP
+    INSERT INTO perf_users (name, email, region) VALUES ('User_JP_' || i, 'user' || i || '@example.jp', 'JP');
+    INSERT INTO perf_users (name, email, region) VALUES ('User_US_' || i, 'user' || i || '@example.com', 'US');
+    INSERT INTO perf_users (name, email, region) VALUES ('User_EU_' || i, 'user' || i || '@example.eu', 'EU');
+  END LOOP;
+END;]]></db:sql>
+                </db:execute-script>
+                <ee:transform doc:name="Seeded">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{setup: "complete", tablesCreated: ["perf_users", "perf_orders"], usersSeeded: 150}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+            <otherwise>
+                <ee:transform doc:name="Already exists">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{setup: "skipped", reason: "data already exists"}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </otherwise>
+        </choice>
+    </flow>
+
+</mule>
+

@@ -1,0 +1,20 @@
+http:
+  port: "8891"
+
+scheduler:
+  cpuIntensive:
+    size: "2"
+
+hqlite:
+  host: "hqlite-mule-server-2m6ahj.pnwfdv.jpn-e1.cloudhub.io"
+  port: "443"
+  user: "mule"
+  password: "REDACTED"
+
+oracle:
+  host: "cloud-services.demos.mulesoft.com"
+  port: "32627"
+  user: "mule"
+  password: "REDACTED"
+  serviceId: "muledb"
+

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:db="http://www.mulesoft.org/schema/mule/db"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+        http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+
+    <global-property doc:name="mule.env" name="mule.env" value="local"/>
+    <configuration-properties file="config/config-${mule.env}.yaml" doc:name="Configuration Properties"/>
+
+    <ee:scheduler-pools poolStrategy="UBER" gracefulShutdownTimeout="15000">
+        <ee:uber corePoolSize="8" maxPoolSize="8" queueSize="0" keepAlive="30000"/>
+    </ee:scheduler-pools>
+
+    <http:request-config name="hqlite-request-config" doc:name="HQLite Request Config">
+        <http:request-connection host="${hqlite.host}" port="${hqlite.port}" protocol="HTTPS"/>
+    </http:request-config>
+
+    <db:config name="hqlite-db-config" doc:name="HQLite JDBC Config">
+        <db:generic-connection url="jdbc:hqlite://${hqlite.host}:${hqlite.port}/default?secure=true"
+                               user="${hqlite.user}" password="${hqlite.password}"
+                               driverClassName="com.hqlite.jdbc.HqliteDriver">
+            <db:pooling-profile maxPoolSize="10" minPoolSize="2"/>
+        </db:generic-connection>
+    </db:config>
+
+    <db:config name="oracle-config" doc:name="Oracle Database Config">
+        <db:oracle-connection host="${oracle.host}" port="${oracle.port}"
+                             user="${oracle.user}" password="${oracle.password}"
+                             serviceName="${oracle.serviceId}">
+            <db:pooling-profile maxPoolSize="10" minPoolSize="2"
+                                acquireIncrement="1"
+                                maxWait="60"
+                                maxWaitUnit="SECONDS"/>
+        </db:oracle-connection>
+    </db:config>
+
+</mule>
+
