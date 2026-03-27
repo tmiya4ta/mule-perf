@@ -9,7 +9,7 @@
         http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
         http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
         http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+        http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
 
     <http:listener-config name="http-listener-config" doc:name="HTTP Listener Config">
         <http:listener-connection host="0.0.0.0" port="${http.port}"/>
@@ -271,7 +271,7 @@ payload[0] default {ok: true}]]></ee:set-payload>
             </when>
 
 
-            <!-- ═══ TIER 4: Salesforce (HTTP) ═══ -->
+            <!-- ═══ TIER 4: Salesforce (HTTP REST API) ═══ -->
 
             <!-- T4-A: Salesforce Account Query (single) -->
             <when expression="#[vars.method == 'GET' and vars.path == '/api/sf/account']">
