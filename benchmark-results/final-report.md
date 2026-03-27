@@ -401,11 +401,40 @@ c=500: 636 RPS (CPU 39%)
 - Echo は変化なし → 元々 UBER スレッド数の制約を受けていなかった
 - **根本原因**: nproc がホスト物理コア数を返し、cgroup vCore 数と乖離するため
 
-### 5.8 DB I/O (HQLite) の特性
+### 5.8 DB I/O (Clouderby) の特性
 
-- DB I/O (HQLite経由) の RPS は Pure Mule の Heavy DW (166 RPS) と同程度
-- HQLite 自体の処理 (HTTP + Derby SELECT) がボトルネック
-- bench-target 側の CPU 94% は DataWeave 変換ではなく HQLite への HTTP I/O 待ちで消費
+- DB I/O (Clouderby 経由) の RPS は Pure Mule の Heavy DW (166 RPS) と同程度
+- Clouderby 自体の処理 (HTTP + Derby SELECT) がボトルネック
+- bench-target 側の CPU 94% は DataWeave 変換ではなく Clouderby への HTTP I/O 待ちで消費
+
+### 5.9 Oracle DB ベンチマーク (VPN 経由)
+
+bench-target (0.1 vCore, CH2) → VPN → socat → Oracle Free 23ai (k8s) の構成でベンチマーク。
+
+**T3-A: 単一 SELECT (c=10, 180s):**
+
+| 指標 | 値 |
+|------|-----|
+| RPS | **138.2** |
+| Avg | 72.35ms |
+| P50 / P90 / P95 / P99 | 86 / 110 / 178 / 195 ms |
+| Total | 24,883 |
+| Err% | **0%** |
+| bench-target CPU | 96% |
+| mule-perf CPU | 9% |
+
+**DB テスト横断比較 (0.1 vCore):**
+
+| テスト | DB | 経路 | RPS | Avg ms |
+|--------|-----|------|-----|--------|
+| T2-A Clouderby (単一) | Derby via HTTP | CH2→Ingress→Clouderby→Derby | 115 | 88 |
+| T2-B Clouderby (200行+DW) | Derby via HTTP | 同上 | 121 | 83 |
+| **T3-A Oracle (単一)** | **Oracle via VPN** | **CH2→VPN→socat→Oracle** | **138** | **72** |
+| T1-C Heavy DW (参考) | なし | 内部URL | 158 | 63 |
+
+- Oracle 直接接続 (138 RPS) は Clouderby (115 RPS) より **20% 高速**
+- VPN + socat 経由でもレイテンシ 72ms で良好
+- bench-target CPU 96% — Oracle I/O 待ちで CPU を使い切っている
 
 ---
 
@@ -531,4 +560,5 @@ mule-perf 0.1 vCore のシステム負荷: CPU 10%, Heap 118/486 MB
 | Internal 0.1 | 0.1 | 1200s ×2 | `09-internal-0.1vcore-1200s/` |
 | Ingress 0.5×1 | 0.5×1 | 1200s ×2 | `10-ingress-0.5vcore-x1-1200s/` |
 | Ingress 0.1×5 | 0.1×5 | 1200s ×2 | `11-ingress-0.1vcore-x5-1200s/` |
-| HQLite JDBC | 0.1 (HQ 0.5) | 1200s ×2 | `12-hqlite-jdbc-0.1vcore-1200s/` |
+| Clouderby JDBC | 0.1 (HQ 0.5) | 1200s ×2 | `12-hqlite-jdbc-0.1vcore-1200s/` |
+| Oracle SELECT | 0.1 (VPN) | 180s | `13-oracle-0.1vcore-180s/` |
