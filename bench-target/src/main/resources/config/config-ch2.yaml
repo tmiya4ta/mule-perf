@@ -9,17 +9,17 @@ clouderby:
   host: "hqlite-mule-server-2m6ahj.pnwfdv.jpn-e1.cloudhub.io"
   port: "443"
   user: "mule"
-  password: "${CLOUDERBY_PASSWORD}"
+  password: "${clouderby.password}"
 
 sf:
   host: "trailsignup-1c3ba81ec14b1c.my.salesforce.com"
-  tokenUrl: "https://${sf.host}/services/oauth2/token"
-  clientId: "${SF_CLIENT_ID}"
-  clientSecret: "${SF_CLIENT_SECRET}"
+  tokenUrl: "https://trailsignup-1c3ba81ec14b1c.my.salesforce.com/services/oauth2/token"
+  clientId: "${sf.clientId}"
+  clientSecret: "${sf.clientSecret}"
 
 oracle:
   host: "cloud-services.demos.mulesoft.com"
   port: "32627"
   user: "mule"
-  password: "${ORACLE_PASSWORD}"
+  password: "${oracle.password}"
   serviceId: "muledb"
