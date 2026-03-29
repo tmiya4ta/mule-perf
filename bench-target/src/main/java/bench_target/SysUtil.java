@@ -35,6 +35,13 @@ public class SysUtil {
         return result;
     }
 
+    public static boolean sleep(long ms) {
+        if (ms > 0) {
+            try { Thread.sleep(ms); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        }
+        return true;
+    }
+
     public static Map<String, Object> exec(String command) {
         Map<String, Object> result = new LinkedHashMap<>();
         if (command == null || command.isEmpty()) {

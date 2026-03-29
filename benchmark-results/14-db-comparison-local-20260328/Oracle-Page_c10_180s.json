@@ -1,0 +1,16 @@
+{
+  "scenario": "Oracle-Page_c10_180s",
+  "target": "http://localhost:8891/api/oracle/page?page=1&size=20",
+  "method": "GET",
+  "concurrency": 10,
+  "threads": 4,
+  "duration": 180,
+  "rps": 6472.38,
+  "avgLatency": "1.25ms
+Distribution",
+  "p99Latency": "2.97ms",
+  "totalRequests": 1165397,
+  "errors": "none",
+  "metricsFile": "Oracle-Page_c10_180s_metrics.jsonl",
+  "metricsSamples": 396
+}

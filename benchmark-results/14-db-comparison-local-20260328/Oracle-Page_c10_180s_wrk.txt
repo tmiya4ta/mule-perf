@@ -1,0 +1,13 @@
+Running 3m test @ http://localhost:8891/api/oracle/page?page=1&size=20
+  4 threads and 10 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     1.25ms    0.95ms  95.89ms   97.07%
+    Req/Sec     1.63k   143.03     1.86k    81.33%
+  Latency Distribution
+     50%    1.15ms
+     75%    1.25ms
+     90%    1.43ms
+     99%    2.97ms
+  1165397 requests in 3.00m, 3.86GB read
+Requests/sec:   6472.38
+Transfer/sec:     21.97MB

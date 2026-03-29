@@ -1,0 +1,13 @@
+Running 3m test @ http://localhost:8891/api/oracle/join-report
+  4 threads and 10 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    76.22ms  154.43ms 816.70ms   84.62%
+    Req/Sec     1.31k   539.23     1.77k    81.85%
+  Latency Distribution
+     50%    1.25ms
+     75%   20.35ms
+     90%  353.89ms
+     99%  567.04ms
+  638374 requests in 3.00m, 0.87GB read
+Requests/sec:   3544.62
+Transfer/sec:      4.97MB

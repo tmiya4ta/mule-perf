@@ -1,0 +1,16 @@
+{
+  "scenario": "Oracle-BulkInsert10_c10_180s",
+  "target": "http://localhost:8891/api/oracle/bulk-insert?count=10",
+  "method": "POST",
+  "concurrency": 10,
+  "threads": 4,
+  "duration": 180,
+  "rps": 2662.04,
+  "avgLatency": "20.37ms
+Distribution",
+  "p99Latency": "539.93ms",
+  "totalRequests": 479401,
+  "errors": "  Socket errors: connect 0, read 0, write 0, timeout 2",
+  "metricsFile": "Oracle-BulkInsert10_c10_180s_metrics.jsonl",
+  "metricsSamples": 396
+}

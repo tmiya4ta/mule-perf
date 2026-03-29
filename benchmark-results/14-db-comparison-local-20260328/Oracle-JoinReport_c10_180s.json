@@ -1,0 +1,16 @@
+{
+  "scenario": "Oracle-JoinReport_c10_180s",
+  "target": "http://localhost:8891/api/oracle/join-report",
+  "method": "GET",
+  "concurrency": 10,
+  "threads": 4,
+  "duration": 180,
+  "rps": 3544.62,
+  "avgLatency": "76.22ms
+Distribution",
+  "p99Latency": "567.04ms",
+  "totalRequests": 638374,
+  "errors": "none",
+  "metricsFile": "Oracle-JoinReport_c10_180s_metrics.jsonl",
+  "metricsSamples": 396
+}

@@ -6,10 +6,10 @@ scheduler:
     size: "8"
 
 clouderby:
-  host: "hqlite-mule-server-2m6ahj.pnwfdv.jpn-e1.cloudhub.io"
+  host: "mule-clouderby-2m6ahj.pnwfdv.jpn-e1.cloudhub.io"
   port: "443"
   user: "mule"
-  password: "${secure.clouderby.password}"
+  password: "mule123"
 
 sf:
   host: "trailsignup-1c3ba81ec14b1c.my.salesforce.com"
@@ -21,5 +21,5 @@ oracle:
   host: "192.168.11.6"
   port: "11521"
   user: "mule"
-  password: "${secure.oracle.password}"
+  password: "Mule_l23_Soft_Oracle"
   serviceId: "FREEPDB1"

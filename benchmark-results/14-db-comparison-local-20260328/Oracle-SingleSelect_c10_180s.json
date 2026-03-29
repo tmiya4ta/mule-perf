@@ -1,0 +1,16 @@
+{
+  "scenario": "Oracle-SingleSelect_c10_180s",
+  "target": "http://localhost:8891/api/oracle/user/1",
+  "method": "GET",
+  "concurrency": 10,
+  "threads": 4,
+  "duration": 180,
+  "rps": 12222.76,
+  "avgLatency": "761.04us
+Distribution",
+  "p99Latency": "2.16ms",
+  "totalRequests": 2200175,
+  "errors": "none",
+  "metricsFile": "Oracle-SingleSelect_c10_180s_metrics.jsonl",
+  "metricsSamples": 396
+}

@@ -1,0 +1,396 @@
+{"ts":1774679630,"target":{
+  "heapUsedMB": 703,
+  "heapMaxMB": 1024,
+  "heapPct": 69,
+  "processors": 16,
+  "cpuPct": 0,
+  "systemCpuPct": 17,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 85912
+}}
+{"ts":1774679635,"target":{
+  "heapUsedMB": 266,
+  "heapMaxMB": 1024,
+  "heapPct": 26,
+  "processors": 16,
+  "cpuPct": 42,
+  "systemCpuPct": 66,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 85917
+}}
+{"ts":1774679640,"target":{
+  "heapUsedMB": 298,
+  "heapMaxMB": 1024,
+  "heapPct": 29,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 61,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 85922
+}}
+{"ts":1774679645,"target":{
+  "heapUsedMB": 295,
+  "heapMaxMB": 1024,
+  "heapPct": 29,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 61,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 85927
+}}
+{"ts":1774679650,"target":{
+  "heapUsedMB": 308,
+  "heapMaxMB": 1024,
+  "heapPct": 30,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 61,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 85932
+}}
+{"ts":1774679655,"target":{
+  "heapUsedMB": 268,
+  "heapMaxMB": 1024,
+  "heapPct": 26,
+  "processors": 16,
+  "cpuPct": 38,
+  "systemCpuPct": 61,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 85937
+}}
+{"ts":1774679660,"target":{
+  "heapUsedMB": 494,
+  "heapMaxMB": 1024,
+  "heapPct": 48,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 62,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 85942
+}}
+{"ts":1774679665,"target":{
+  "heapUsedMB": 243,
+  "heapMaxMB": 1024,
+  "heapPct": 24,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 62,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 85947
+}}
+{"ts":1774679670,"target":{
+  "heapUsedMB": 552,
+  "heapMaxMB": 1024,
+  "heapPct": 54,
+  "processors": 16,
+  "cpuPct": 38,
+  "systemCpuPct": 62,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 85952
+}}
+{"ts":1774679675,"target":{
+  "heapUsedMB": 359,
+  "heapMaxMB": 1024,
+  "heapPct": 35,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 62,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 85957
+}}
+{"ts":1774679680,"target":{
+  "heapUsedMB": 234,
+  "heapMaxMB": 1024,
+  "heapPct": 23,
+  "processors": 16,
+  "cpuPct": 38,
+  "systemCpuPct": 61,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 85962
+}}
+{"ts":1774679685,"target":{
+  "heapUsedMB": 586,
+  "heapMaxMB": 1024,
+  "heapPct": 57,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 62,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 85967
+}}
+{"ts":1774679690,"target":{
+  "heapUsedMB": 233,
+  "heapMaxMB": 1024,
+  "heapPct": 23,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 62,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 85972
+}}
+{"ts":1774679695,"target":{
+  "heapUsedMB": 367,
+  "heapMaxMB": 1024,
+  "heapPct": 36,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 63,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 85977
+}}
+{"ts":1774679700,"target":{
+  "heapUsedMB": 678,
+  "heapMaxMB": 1024,
+  "heapPct": 66,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 61,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 85982
+}}
+{"ts":1774679705,"target":{
+  "heapUsedMB": 509,
+  "heapMaxMB": 1024,
+  "heapPct": 50,
+  "processors": 16,
+  "cpuPct": 38,
+  "systemCpuPct": 62,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 85987
+}}
+{"ts":1774679710,"target":{
+  "heapUsedMB": 229,
+  "heapMaxMB": 1024,
+  "heapPct": 22,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 62,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 85992
+}}
+{"ts":1774679715,"target":{
+  "heapUsedMB": 291,
+  "heapMaxMB": 1024,
+  "heapPct": 28,
+  "processors": 16,
+  "cpuPct": 36,
+  "systemCpuPct": 66,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 85997
+}}
+{"ts":1774679720,"target":{
+  "heapUsedMB": 543,
+  "heapMaxMB": 1024,
+  "heapPct": 53,
+  "processors": 16,
+  "cpuPct": 36,
+  "systemCpuPct": 67,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 86003
+}}
+{"ts":1774679725,"target":{
+  "heapUsedMB": 265,
+  "heapMaxMB": 1024,
+  "heapPct": 26,
+  "processors": 16,
+  "cpuPct": 36,
+  "systemCpuPct": 67,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 86008
+}}
+{"ts":1774679730,"target":{
+  "heapUsedMB": 325,
+  "heapMaxMB": 1024,
+  "heapPct": 32,
+  "processors": 16,
+  "cpuPct": 36,
+  "systemCpuPct": 68,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 86013
+}}
+{"ts":1774679735,"target":{
+  "heapUsedMB": 334,
+  "heapMaxMB": 1024,
+  "heapPct": 33,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 63,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 86018
+}}
+{"ts":1774679740,"target":{
+  "heapUsedMB": 408,
+  "heapMaxMB": 1024,
+  "heapPct": 40,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 62,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 86023
+}}
+{"ts":1774679745,"target":{
+  "heapUsedMB": 528,
+  "heapMaxMB": 1024,
+  "heapPct": 52,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 62,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 86028
+}}
+{"ts":1774679750,"target":{
+  "heapUsedMB": 684,
+  "heapMaxMB": 1024,
+  "heapPct": 67,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 63,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 86033
+}}
+{"ts":1774679755,"target":{
+  "heapUsedMB": 399,
+  "heapMaxMB": 1024,
+  "heapPct": 39,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 63,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 86038
+}}
+{"ts":1774679760,"target":{
+  "heapUsedMB": 283,
+  "heapMaxMB": 1024,
+  "heapPct": 28,
+  "processors": 16,
+  "cpuPct": 35,
+  "systemCpuPct": 58,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 86043
+}}
+{"ts":1774679765,"target":{
+  "heapUsedMB": 648,
+  "heapMaxMB": 1024,
+  "heapPct": 63,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 64,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 86048
+}}
+{"ts":1774679770,"target":{
+  "heapUsedMB": 342,
+  "heapMaxMB": 1024,
+  "heapPct": 33,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 62,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 86053
+}}
+{"ts":1774679775,"target":{
+  "heapUsedMB": 577,
+  "heapMaxMB": 1024,
+  "heapPct": 56,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 63,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 86058
+}}
+{"ts":1774679780,"target":{
+  "heapUsedMB": 454,
+  "heapMaxMB": 1024,
+  "heapPct": 44,
+  "processors": 16,
+  "cpuPct": 38,
+  "systemCpuPct": 61,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 86063
+}}
+{"ts":1774679785,"target":{
+  "heapUsedMB": 295,
+  "heapMaxMB": 1024,
+  "heapPct": 29,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 62,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 86068
+}}
+{"ts":1774679790,"target":{
+  "heapUsedMB": 677,
+  "heapMaxMB": 1024,
+  "heapPct": 66,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 62,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 86073
+}}
+{"ts":1774679795,"target":{
+  "heapUsedMB": 496,
+  "heapMaxMB": 1024,
+  "heapPct": 48,
+  "processors": 16,
+  "cpuPct": 37,
+  "systemCpuPct": 61,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 86078
+}}
+{"ts":1774679800,"target":{
+  "heapUsedMB": 332,
+  "heapMaxMB": 1024,
+  "heapPct": 32,
+  "processors": 16,
+  "cpuPct": 38,
+  "systemCpuPct": 62,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 86083
+}}
+{"ts":1774679805,"target":{
+  "heapUsedMB": 549,
+  "heapMaxMB": 1024,
+  "heapPct": 54,
+  "processors": 16,
+  "cpuPct": 35,
+  "systemCpuPct": 62,
+  "threadCount": 279,
+  "peakThreadCount": 350,
+  "uptimeSeconds": 86088
+}}

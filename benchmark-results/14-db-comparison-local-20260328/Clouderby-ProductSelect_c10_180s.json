@@ -1,0 +1,16 @@
+{
+  "scenario": "Clouderby-ProductSelect_c10_180s",
+  "target": "http://localhost:8891/api/clouderby/product/P001",
+  "method": "GET",
+  "concurrency": 10,
+  "threads": 4,
+  "duration": 180,
+  "rps": 0.27,
+  "avgLatency": "0.00us
+Distribution",
+  "p99Latency": "0.00us",
+  "totalRequests": 48,
+  "errors": "  Socket errors: connect 0, read 0, write 0, timeout 48",
+  "metricsFile": "Clouderby-ProductSelect_c10_180s_metrics.jsonl",
+  "metricsSamples": 64
+}
