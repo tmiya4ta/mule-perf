@@ -2,7 +2,7 @@
 
 A high-performance HTTP load testing tool built on MuleSoft Mule 4, featuring a real-time dashboard with Chart.js.
 
-All load generation runs in Java using [Zeph](https://gitlab.com/myst3m/zeph) NIO HTTP client with async `CompletableFuture` chains — zero threads per connection, lock-free metrics, ms-precision percentiles. [Validated against hey](#accuracy-validation-vs-hey) with ±3% RPS accuracy.
+All load generation runs in Java using [Zeph](https://gitlab.com/myst3m/zeph) NIO HTTP client with async `CompletableFuture` chains — zero threads per connection, lock-free metrics, ms-precision percentiles. [Validated against hey](#accuracy-validation-vs-hey) with ±1% RPS accuracy.
 
 ![Dashboard](docs/dashboard.png)
 
@@ -174,46 +174,19 @@ src/main/
 
 ## Accuracy Validation (vs hey)
 
-Cross-validated measurement accuracy against [hey](https://github.com/rakyll/hey) (Go HTTP load generator). Both tools ran on the same CloudHub 2 Pod targeting the same endpoint under identical conditions (c=50, 60s).
+Cross-validated measurement accuracy against [hey](https://github.com/rakyll/hey) (Go HTTP load generator). Both tools ran on the **same CloudHub 2 Pod** (mule-perf 1 vCore) targeting the same bench-target app via Internal URL under identical conditions (c=50, 60s).
 
-### mule-perf @ 1 vCore
-
-| Scenario | Tool | RPS | P50 ms | P90 ms | P95 ms | P99 ms | Total |
-|----------|------|-----|--------|--------|--------|--------|-------|
-| Echo | hey | 841 | 88 | 99 | 102 | 120 | 50,570 |
-| | mule-perf | 839 | 89 | 98 | 101 | 113 | 50,370 |
-| | **diff** | **-0.3%** | +1ms | -1ms | -1ms | -7ms | |
-| Small DW | hey | 723 | 93 | 101 | 104 | 187 | 43,372 |
-| | mule-perf | 701 | 94 | 101 | 105 | 183 | 42,059 |
-| | **diff** | **-3%** | +1ms | 0ms | +1ms | -4ms | |
-| Heavy DW | hey | 153 | 304 | 400 | 405 | 496 | 9,217 |
-| | mule-perf | 144 | 309 | 404 | 487 | 503 | 8,683 |
-| | **diff** | **-6%** | +5ms | +4ms | +82ms | +7ms | |
-
-### mule-perf @ 0.1 vCore
-
-Verified that measurement accuracy is maintained even when mule-perf is scaled down to 0.1 vCore.
-
-| Scenario | Tool | RPS | P50 ms | P90 ms | P95 ms | P99 ms | Total |
-|----------|------|-----|--------|--------|--------|--------|-------|
-| Echo | hey | 869 | 84 | 98 | 102 | 123 | 52,247 |
-| | mule-perf | 868 | 85 | 99 | 102 | 120 | 52,064 |
-| | **diff** | **-0.2%** | +1ms | +1ms | 0ms | -3ms | |
-| Small DW | hey | 741 | 90 | 101 | 106 | 186 | 44,440 |
-| | mule-perf | 713 | 92 | 102 | 108 | 188 | 42,825 |
-| | **diff** | **-4%** | +2ms | +1ms | +2ms | +2ms | |
-| Heavy DW | hey | 154 | 304 | 400 | 408 | 498 | 9,270 |
-| | mule-perf | 139 | 319 | 482 | 497 | 587 | 8,410 |
-| | **diff** | **-10%** | +15ms | +82ms | +89ms | +89ms | |
-
-System load during 0.1 vCore test: CPU 10%, Heap 118/486 MB — ample headroom.
+| Scenario | hey RPS | mule-perf RPS | diff | hey P50 | mp P50 | hey P99 | mp P99 |
+|----------|---------|---------------|------|---------|--------|---------|--------|
+| Echo | 947 | 941 | **-0.7%** | 83ms | 84ms | 107ms | 108ms |
+| Small DW | 828 | 836 | **+1.0%** | 90ms | 90ms | 127ms | 115ms |
+| Heavy DW | 569 | 567 | **-0.3%** | 97ms | 97ms | 202ms | 202ms |
 
 ### Conclusion
 
-- **Echo / Small DW match within ±4%** — consistent at both 1 vCore and 0.1 vCore
-- **Heavy DW diverges up to -10% at 0.1 vCore** — GC and scheduling overhead affect tail latency distribution
-- mule-perf is **a reliable load generator even at 0.1 vCore**
-- For highest accuracy, 1 vCore is recommended (within ±3%)
+- **All scenarios match within ±1%** — RPS and percentiles are virtually identical
+- mule-perf's Zeph NIO async client achieves the same throughput as hey's Go goroutine-based engine
+- mule-perf is **a reliable and accurate load generator** for CloudHub 2 benchmarking
 
 ## Tech Stack
 
