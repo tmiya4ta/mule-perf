@@ -23,3 +23,10 @@ oracle:
   user: "mule"
   password: "Mule_l23_Soft_Oracle"
   serviceId: "FREEPDB1"
+
+oraclese:
+  host: "cloud-services.demos.mulesoft.com"
+  port: "32697"
+  user: "mule123"
+  password: "Mule_l23_Soft_Oracle"
+  serviceId: "mulepdb"

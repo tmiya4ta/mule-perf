@@ -8,7 +8,7 @@ TARGET_URL="${2:?Usage: $0 <perf-url> <target-url> [internal-target-url]}"
 INTERNAL_TARGET="${3:-$TARGET_URL}"
 
 ROUNDS=3
-BASE_DIR="benchmark-results/14-db-comparison-$(date +%Y%m%d)"
+BASE_DIR="${RESULT_DIR:-benchmark-results/14-db-comparison-$(date +%Y%m%d)}"
 
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 

@@ -35,6 +35,16 @@ public class SysUtil {
         return result;
     }
 
+    public static String generatePayload(int sizeKB) {
+        int totalBytes = sizeKB * 1024;
+        StringBuilder sb = new StringBuilder(totalBytes);
+        String block = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz-_";
+        while (sb.length() < totalBytes) {
+            sb.append(block);
+        }
+        return sb.substring(0, totalBytes);
+    }
+
     public static boolean sleep(long ms) {
         if (ms > 0) {
             try { Thread.sleep(ms); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }

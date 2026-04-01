@@ -124,6 +124,89 @@ var topItems = itemTotals pluck ((v, k) -> {item: k as String, total: v})
                 </ee:transform>
             </when>
 
+            <!-- ═══ T1-F: Response Size Test ═══ -->
+
+            <!-- GET /api/payload?sizeKB=10 - Generate response of specified size -->
+            <when expression="#[vars.method == 'GET' and vars.path == '/api/payload']">
+                <ee:transform doc:name="Generate Payload">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var sizeKB = (attributes.queryParams.sizeKB default "1") as Number
+---
+{
+  ok: true,
+  sizeKB: sizeKB,
+  data: java!bench_target::SysUtil::generatePayload(sizeKB)
+}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- ═══ Benchmark Data Seeding ═══ -->
+
+            <!-- POST /api/benchmark/seed-orders?count=10000 - Seed bench_orders to target count -->
+            <when expression="#[vars.method == 'POST' and vars.path == '/api/benchmark/seed-orders']">
+                <set-variable variableName="targetCount" value="#[(attributes.queryParams['count'] default '10000') as Number]" doc:name="Target Count"/>
+                <db:select config-ref="oracle-config" doc:name="Current Count">
+                    <db:sql>SELECT COUNT(*) AS cnt FROM bench_orders</db:sql>
+                </db:select>
+                <set-variable variableName="currentCount" value="#[payload[0].CNT]" doc:name="Save Current"/>
+                <set-variable variableName="remaining" value="#[vars.targetCount - vars.currentCount]" doc:name="Remaining"/>
+                <choice doc:name="Need more?">
+                    <when expression="#[vars.remaining > 0]">
+                        <set-variable variableName="inserted" value="#[0]" doc:name="Init Counter"/>
+                        <foreach collection="#[1 to ((vars.remaining / 5000) as Number {class: 'java.lang.Integer'} + 1)]" doc:name="Batch Loop">
+                            <set-variable variableName="thisBatch" value="#[if ((vars.remaining - vars.inserted) > 5000) 5000 else (vars.remaining - vars.inserted)]" doc:name="This Batch"/>
+                            <choice doc:name="Skip if done">
+                                <when expression="#[vars.thisBatch > 0]">
+                                    <ee:transform doc:name="Generate Batch">
+                                        <ee:message>
+                                            <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+var count = vars.thisBatch
+var base = vars.currentCount + vars.inserted
+var items = ["Widget", "Gadget", "Gizmo", "Doohickey", "Thingamajig"]
+var statuses = ["pending", "shipped", "delivered", "cancelled"]
+---
+(1 to count) map ((i) -> {
+    user_id: ((base + i - 1) mod 150) + 1,
+    item: items[(base + i - 1) mod 5],
+    qty: (((base + i) * 3) mod 20) + 1,
+    unit_price: (100 + (((base + i) * 13) mod 9900)) / 100,
+    status: statuses[(base + i - 1) mod 4]
+})]]></ee:set-payload>
+                                        </ee:message>
+                                    </ee:transform>
+                                    <db:bulk-insert config-ref="oracle-config" doc:name="Bulk Insert Batch">
+                                        <db:sql>INSERT INTO bench_orders (user_id, item, qty, unit_price, status) VALUES (:user_id, :item, :qty, :unit_price, :status)</db:sql>
+                                    </db:bulk-insert>
+                                    <set-variable variableName="inserted" value="#[vars.inserted + vars.thisBatch]" doc:name="Update Counter"/>
+                                </when>
+                            </choice>
+                        </foreach>
+                        <ee:transform doc:name="Result">
+                            <ee:message>
+                                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{ok: true, previousCount: vars.currentCount, inserted: vars.inserted, totalCount: vars.currentCount + vars.inserted}]]></ee:set-payload>
+                            </ee:message>
+                        </ee:transform>
+                    </when>
+                    <otherwise>
+                        <ee:transform doc:name="Already enough">
+                            <ee:message>
+                                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{ok: true, previousCount: vars.currentCount, inserted: 0, totalCount: vars.currentCount, message: "already at or above target"}]]></ee:set-payload>
+                            </ee:message>
+                        </ee:transform>
+                    </otherwise>
+                </choice>
+            </when>
+
             <!-- ═══ T1-D: Sleep (configurable latency simulation) ═══ -->
 
             <!-- GET /api/sleep?ms=50 - Sleep for N ms, returns elapsed time -->
@@ -542,6 +625,100 @@ output application/json
                 </ee:transform>
             </when>
 
+            <!-- ═══ T6: Oracle SE Cloud ═══ -->
+
+            <!-- T6-A: Oracle SE JOIN + Aggregation Report -->
+            <when expression="#[vars.method == 'GET' and vars.path == '/api/oraclese/join-report']">
+                <db:select config-ref="oraclese-config" doc:name="OracleSE JOIN Query">
+                    <db:sql><![CDATA[SELECT u.region, u.department,
+                        COUNT(o.id) AS order_count,
+                        SUM(o.qty * o.unit_price) AS total_amount,
+                        AVG(o.qty * o.unit_price) AS avg_amount,
+                        COUNT(CASE WHEN o.status = 'delivered' THEN 1 END) AS delivered_count,
+                        COUNT(CASE WHEN o.status = 'cancelled' THEN 1 END) AS cancelled_count
+                    FROM bench_users u
+                    INNER JOIN bench_orders o ON u.id = o.user_id
+                    GROUP BY u.region, u.department
+                    ORDER BY total_amount DESC]]></db:sql>
+                </db:select>
+                <ee:transform doc:name="Format Report">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var rows = payload
+var byRegion = rows groupBy $.REGION
+---
+{
+  totalGroups: sizeOf(rows),
+  grandTotal: rows reduce ((r, acc=0) -> acc + (r.TOTAL_AMOUNT default 0)),
+  byRegion: byRegion mapObject ((items, region) -> (region): {
+    departments: sizeOf(items),
+    totalAmount: items reduce ((r, acc=0) -> acc + (r.TOTAL_AMOUNT default 0)),
+    totalOrders: items reduce ((r, acc=0) -> acc + (r.ORDER_COUNT default 0))
+  }),
+  details: rows
+}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- T6-C: Oracle SE Bulk Insert -->
+            <when expression="#[vars.method == 'POST' and vars.path == '/api/oraclese/bulk-insert']">
+                <set-variable variableName="insertCount" value="#[(attributes.queryParams['count'] default '10') as Number]" doc:name="Insert Count"/>
+                <ee:transform doc:name="Generate Records">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+var count = vars.insertCount
+var items = ["Widget", "Gadget", "Gizmo", "Doohickey", "Thingamajig"]
+var statuses = ["pending", "shipped", "delivered", "cancelled"]
+---
+(1 to count) map ((i) -> {
+    user_id: ((i - 1) mod 150) + 1,
+    item: items[(i - 1) mod 5],
+    qty: ((i * 3) mod 20) + 1,
+    unit_price: (100 + ((i * 13) mod 9900)) / 100,
+    status: statuses[(i - 1) mod 4]
+})]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+                <set-variable variableName="recordCount" value="#[sizeOf(payload)]" doc:name="Save Count"/>
+                <db:bulk-insert config-ref="oraclese-config" doc:name="Bulk Insert Orders">
+                    <db:sql>INSERT INTO bench_orders (user_id, item, qty, unit_price, status) VALUES (:user_id, :item, :qty, :unit_price, :status)</db:sql>
+                </db:bulk-insert>
+                <ee:transform doc:name="Format">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{ok: true, inserted: vars.recordCount}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
+            <!-- T6-E: Oracle SE Pagination -->
+            <when expression="#[vars.method == 'GET' and vars.path == '/api/oraclese/page']">
+                <set-variable variableName="page" value="#[(attributes.queryParams.page default '1') as Number]" doc:name="Page"/>
+                <set-variable variableName="pageSize" value="#[(attributes.queryParams['size'] default '20') as Number]" doc:name="Page Size"/>
+                <db:select config-ref="oraclese-config" doc:name="Select Page">
+                    <db:sql>SELECT id, name, email, region, department, salary FROM bench_users ORDER BY id OFFSET :offset ROWS FETCH NEXT :pageSize ROWS ONLY</db:sql>
+                    <db:input-parameters>#[{offset: (vars.page - 1) * vars.pageSize, pageSize: vars.pageSize}]</db:input-parameters>
+                </db:select>
+                <ee:transform doc:name="Format">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  page: vars.page,
+  pageSize: vars.pageSize,
+  count: sizeOf(payload),
+  users: payload
+}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </when>
+
             <!-- ═══ TIER 4: Salesforce (Connector) ═══ -->
 
             <!-- T4-A: Salesforce Account Query (single) -->
@@ -745,6 +922,43 @@ output application/json
                 </on-error-continue>
             </error-handler>
         </try>
+        <!-- OracleSE Cloud: bench_users -->
+        <try doc:name="Create OracleSE bench_users">
+            <db:execute-ddl config-ref="oraclese-config">
+                <db:sql><![CDATA[CREATE TABLE bench_users (
+                    id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                    name VARCHAR2(100),
+                    email VARCHAR2(200),
+                    region VARCHAR2(10),
+                    department VARCHAR2(50),
+                    salary NUMBER
+                )]]></db:sql>
+            </db:execute-ddl>
+            <error-handler>
+                <on-error-continue type="ANY">
+                    <logger level="INFO" message="OracleSE bench_users already exists"/>
+                </on-error-continue>
+            </error-handler>
+        </try>
+        <!-- OracleSE Cloud: bench_orders -->
+        <try doc:name="Create OracleSE bench_orders">
+            <db:execute-ddl config-ref="oraclese-config">
+                <db:sql><![CDATA[CREATE TABLE bench_orders (
+                    id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                    user_id NUMBER,
+                    item VARCHAR2(100),
+                    qty NUMBER,
+                    unit_price NUMBER(10,2),
+                    status VARCHAR2(20),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )]]></db:sql>
+            </db:execute-ddl>
+            <error-handler>
+                <on-error-continue type="ANY">
+                    <logger level="INFO" message="OracleSE bench_orders already exists"/>
+                </on-error-continue>
+            </error-handler>
+        </try>
         <!-- Clouderby: bench_users -->
         <try doc:name="Create Clouderby bench_users">
             <db:execute-ddl config-ref="clouderby-db-config">
@@ -813,6 +1027,11 @@ flatten(regions map ((region, ri) ->
                 <db:bulk-insert config-ref="oracle-config" doc:name="Seed Oracle Users">
                     <db:sql>INSERT INTO bench_users (name, email, region, department, salary) VALUES (:name, :email, :region, :department, :salary)</db:sql>
                 </db:bulk-insert>
+                <!-- Seed OracleSE users -->
+                <set-payload value="#[vars.userData]" doc:name="Restore Users for OracleSE"/>
+                <db:bulk-insert config-ref="oraclese-config" doc:name="Seed OracleSE Users">
+                    <db:sql>INSERT INTO bench_users (name, email, region, department, salary) VALUES (:name, :email, :region, :department, :salary)</db:sql>
+                </db:bulk-insert>
                 <!-- Restore payload for Clouderby -->
                 <set-payload value="#[vars.userData]" doc:name="Restore Users"/>
                 <db:bulk-insert config-ref="clouderby-db-config" doc:name="Seed Clouderby Users">
@@ -840,6 +1059,11 @@ var statuses = ["pending", "shipped", "delivered", "cancelled"]
                 <db:bulk-insert config-ref="oracle-config" doc:name="Seed Oracle Orders">
                     <db:sql>INSERT INTO bench_orders (user_id, item, qty, unit_price, status) VALUES (:user_id, :item, :qty, :unit_price, :status)</db:sql>
                 </db:bulk-insert>
+                <!-- Seed OracleSE orders -->
+                <set-payload value="#[vars.orderData]" doc:name="Restore Orders for OracleSE"/>
+                <db:bulk-insert config-ref="oraclese-config" doc:name="Seed OracleSE Orders">
+                    <db:sql>INSERT INTO bench_orders (user_id, item, qty, unit_price, status) VALUES (:user_id, :item, :qty, :unit_price, :status)</db:sql>
+                </db:bulk-insert>
                 <!-- Restore payload for Clouderby -->
                 <set-payload value="#[vars.orderData]" doc:name="Restore Orders"/>
                 <db:bulk-insert config-ref="clouderby-db-config" doc:name="Seed Clouderby Orders">
@@ -850,7 +1074,7 @@ var statuses = ["pending", "shipped", "delivered", "cancelled"]
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-{setup: "complete", tables: ["bench_users", "bench_orders"], usersSeeded: 150, ordersSeeded: 500, databases: ["oracle", "clouderby"]}]]></ee:set-payload>
+{setup: "complete", tables: ["bench_users", "bench_orders"], usersSeeded: 150, ordersSeeded: 500, databases: ["oracle", "oraclese", "clouderby"]}]]></ee:set-payload>
                     </ee:message>
                 </ee:transform>
             </when>
@@ -874,6 +1098,14 @@ output application/json
         </try>
         <try doc:name="Drop Oracle bench_users">
             <db:execute-ddl config-ref="oracle-config"><db:sql>DROP TABLE bench_users</db:sql></db:execute-ddl>
+            <error-handler><on-error-continue type="ANY"><logger level="INFO" message="drop skipped"/></on-error-continue></error-handler>
+        </try>
+        <try doc:name="Drop OracleSE bench_orders">
+            <db:execute-ddl config-ref="oraclese-config"><db:sql>DROP TABLE bench_orders</db:sql></db:execute-ddl>
+            <error-handler><on-error-continue type="ANY"><logger level="INFO" message="drop skipped"/></on-error-continue></error-handler>
+        </try>
+        <try doc:name="Drop OracleSE bench_users">
+            <db:execute-ddl config-ref="oraclese-config"><db:sql>DROP TABLE bench_users</db:sql></db:execute-ddl>
             <error-handler><on-error-continue type="ANY"><logger level="INFO" message="drop skipped"/></on-error-continue></error-handler>
         </try>
         <try doc:name="Drop Clouderby bench_orders">

@@ -48,7 +48,7 @@ run_benchmark() {
 
     local test_body
     if [ -n "$body" ]; then
-        test_body=$(jq -n --arg url "$url" --arg method "$method" --arg body "$body" \
+        test_body=$(jq -n --arg url "$url" --arg method "$method" --argjson body "$body" \
             --argjson c "$CONCURRENCY" --argjson d "$DURATION" --argjson w "$WARMUP" \
             '{targetUrl: $url, method: $method, body: $body, concurrency: $c, duration: $d, warmup: $w}')
     else

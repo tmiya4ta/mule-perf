@@ -69,7 +69,7 @@ run_benchmark() {
         test_body=$(jq -n \
             --arg url "$url" \
             --arg method "$method" \
-            --arg body "$body" \
+            --argjson body "$body" \
             --argjson c "$CONCURRENCY" \
             --argjson d "$DURATION" \
             --argjson w "$WARMUP" \

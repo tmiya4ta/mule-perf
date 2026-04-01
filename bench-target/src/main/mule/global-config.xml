@@ -16,15 +16,13 @@
     <global-property doc:name="mule.env" name="mule.env" value="local"/>
     <configuration-properties file="config/config-${mule.env}.yaml" doc:name="Configuration Properties"/>
 
-    <ee:scheduler-pools poolStrategy="UBER" gracefulShutdownTimeout="15000">
-        <ee:uber corePoolSize="8" maxPoolSize="8" queueSize="0" keepAlive="30000"/>
-    </ee:scheduler-pools>
+    <!-- UBER pool: default (availableProcessors * 2) -->
 
     <db:config name="clouderby-db-config" doc:name="Clouderby JDBC Config">
         <db:generic-connection url="jdbc:clouderby://${clouderby.host}:${clouderby.port}/default?secure=true"
                                user="${clouderby.user}" password="${clouderby.password}"
                                driverClassName="io.gitlab.myst3m.clouderby.jdbc.ClouderbyDriver">
-            <db:pooling-profile maxPoolSize="10" minPoolSize="2"/>
+            <db:pooling-profile maxPoolSize="50" minPoolSize="2"/>
         </db:generic-connection>
     </db:config>
 
@@ -41,8 +39,19 @@
         <db:oracle-connection host="${oracle.host}" port="${oracle.port}"
                              user="${oracle.user}" password="${oracle.password}"
                              serviceName="${oracle.serviceId}">
-            <db:pooling-profile maxPoolSize="10" minPoolSize="2"
-                                acquireIncrement="1"
+            <db:pooling-profile maxPoolSize="50" minPoolSize="2"
+                                acquireIncrement="2"
+                                maxWait="60"
+                                maxWaitUnit="SECONDS"/>
+        </db:oracle-connection>
+    </db:config>
+
+    <db:config name="oraclese-config" doc:name="Oracle SE Cloud Config">
+        <db:oracle-connection host="${oraclese.host}" port="${oraclese.port}"
+                             user="${oraclese.user}" password="${oraclese.password}"
+                             serviceName="${oraclese.serviceId}">
+            <db:pooling-profile maxPoolSize="50" minPoolSize="2"
+                                acquireIncrement="2"
                                 maxWait="60"
                                 maxWaitUnit="SECONDS"/>
         </db:oracle-connection>
